@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>角色管理 - 带外管理系统</title>
+<style>
+  :root {
+    --bg: #f0f2f5;
+    --bg2: #ffffff;
+    --bg3: #fafafa;
+    --ink: #303133;
+    --ink2: #606266;
+    --muted: #909399;
+    --muted2: #c0c4cc;
+    --muted3: #dcdfe6;
+    --rule: #dcdfe6;
+    --rule2: #ebeef5;
+    --accent: #409eff;
+    --accent-hover: #66b1ff;
+    --accent-active: #3a8ee6;
+    --accent-bg: #ecf5ff;
+    --accent-light: #e6f7ff;
+    --danger: #f56c6c;
+    --danger-hover: #f78989;
+    --danger-bg: #fef0f0;
+    --success: #67c23a;
+    --success-bg: #f0f9eb;
+    --warning: #e6a23c;
+    --warning-bg: #fdf6ec;
+    --header-bg: #fafafa;
+    --radius: 4px;
+    --radius-sm: 4px;
+    --shadow: 0 2px 12px 0 rgba(0,0,0,0.06);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+    background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.5; overflow: hidden;
+  }
+
+  .main-content { height: 100vh; display: flex; flex-direction: column; padding: 16px 24px; }
+  .page-card { background: var(--bg2); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+  .filter-bar { display: flex; align-items: flex-start; gap: 12px; padding: 16px 20px; flex-wrap: wrap; flex-shrink: 0; border-bottom: 1px solid var(--rule2); }
+  .filter-group { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .filter-item { display: flex; align-items: center; gap: 8px; }
+  .filter-label { font-size: 14px; color: var(--ink2); white-space: nowrap; }
+  .filter-input { width: 180px; height: 32px; border: 1px solid var(--rule); border-radius: var(--radius); padding: 0 12px; font-size: 14px; color: var(--ink); background: var(--bg2); outline: none; transition: border-color 0.2s; font-family: inherit; }
+  .filter-input:focus { border-color: var(--accent); }
+  .filter-input::placeholder { color: var(--muted2); }
+  .filter-select { width: 180px; height: 32px; border: 1px solid var(--rule); border-radius: var(--radius); padding: 0 32px 0 12px; font-size: 14px; color: var(--ink); background: var(--bg2); outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23909399' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; transition: border-color 0.2s; }
+  .filter-select:focus { border-color: var(--accent); }
+  .filter-buttons { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+  .filter-left-btns { display: flex; align-items: center; gap: 8px; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 32px; padding: 0 16px; border: 1px solid var(--rule); border-radius: var(--radius); font-size: 14px; cursor: pointer; transition: all 0.2s; background: var(--bg2); color: var(--ink); font-family: inherit; white-space: nowrap; }
+  .btn:hover { color: var(--accent); border-color: var(--accent); }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
+  .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .btn-danger:hover { background: var(--danger-hover); border-color: var(--danger-hover); color: #fff; }
+  .btn-default { background: var(--bg2); }
+  .btn.disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+
+  .table-wrap { flex: 1; overflow: auto; min-height: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead th { background: var(--header-bg); color: var(--ink2); font-weight: 500; text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--rule2); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+  tbody td { padding: 12px 16px; border-bottom: 1px solid var(--rule2); color: var(--ink); white-space: nowrap; }
+  tbody tr:hover { background: var(--bg3); }
+  tbody tr.selected { background: var(--accent-light); }
+  .empty-row td { text-align: center; padding: 60px 0; color: var(--muted); }
+
+  .checkbox { display: inline-block; width: 16px; height: 16px; border: 1px solid var(--muted2); border-radius: 3px; cursor: pointer; position: relative; transition: all 0.2s; vertical-align: middle; }
+  .checkbox.checked { background: var(--accent); border-color: var(--accent); }
+  .checkbox.checked::after { content: ''; position: absolute; left: 4px; top: 1px; width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .checkbox.indeterminate { background: var(--accent); border-color: var(--accent); }
+  .checkbox.indeterminate::after { content: ''; position: absolute; left: 3px; top: 7px; width: 8px; height: 2px; background: #fff; }
+
+  .status-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--radius); font-size: 12px; line-height: 1.5; }
+  .status-tag.normal { color: var(--success); background: var(--success-bg); }
+  .status-tag.disabled { color: var(--danger); background: var(--danger-bg); }
+  .status-tag::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .scope-tag { display: inline-block; padding: 1px 8px; border-radius: var(--radius); font-size: 12px; background: var(--accent-bg); color: var(--accent); border: 1px solid #d9ecff; }
+
+  .btn-text { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 14px; padding: 0; transition: color 0.2s; font-family: inherit; }
+  .btn-text:hover { color: var(--accent-hover); }
+  .btn-text.danger { color: var(--danger); }
+  .btn-text.danger:hover { color: var(--danger-hover); }
+  .btn-text.warning { color: var(--warning); }
+  .btn-text.warning:hover { opacity: 0.8; }
+  .action-group { display: flex; gap: 12px; }
+
+  /* Drawer */
+  .drawer-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s; }
+  .drawer-overlay.show { opacity: 1; visibility: visible; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 560px; background: var(--bg2); z-index: 1001; transform: translateX(100%); transition: transform 0.3s; display: flex; flex-direction: column; box-shadow: -4px 0 16px rgba(0,0,0,0.08); }
+  .drawer.show { transform: translateX(0); }
+  .drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid var(--rule2); flex-shrink: 0; }
+  .drawer-title { font-size: 16px; font-weight: 500; color: var(--ink); }
+  .drawer-close { background: none; border: none; font-size: 20px; color: var(--muted); cursor: pointer; padding: 0; line-height: 1; transition: color 0.2s; }
+  .drawer-close:hover { color: var(--ink); }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 24px; }
+  .drawer-footer { padding: 12px 24px; border-top: 1px solid var(--rule2); display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+
+  /* Form */
+  .form-item { margin-bottom: 22px; }
+  .form-item:last-child { margin-bottom: 0; }
+  .form-item-label { display: flex; align-items: center; gap: 2px; margin-bottom: 8px; }
+  .required-mark { color: var(--danger); font-size: 14px; margin-right: 2px; line-height: 1; }
+  .form-item-label-text { font-size: 14px; color: var(--ink); }
+  .form-input { width: 100%; height: 34px; border: 1px solid var(--rule); border-radius: var(--radius-sm); padding: 0 12px; font-size: 14px; color: var(--ink); background: var(--bg2); outline: none; transition: all 0.2s; font-family: inherit; }
+  .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(64,158,255,0.08); }
+  .form-input:disabled { background: var(--bg3); color: var(--muted); cursor: not-allowed; }
+  .form-select { width: 100%; height: 34px; border: 1px solid var(--rule); border-radius: var(--radius-sm); padding: 0 32px 0 12px; font-size: 14px; color: var(--ink); background: var(--bg2); outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23909399' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+  .form-select:focus { border-color: var(--accent); }
+  .form-textarea { width: 100%; min-height: 80px; border: 1px solid var(--rule); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 14px; color: var(--ink); background: var(--bg2); outline: none; transition: all 0.2s; font-family: inherit; resize: vertical; }
+  .form-textarea:focus { border-color: var(--accent); }
+  .form-hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .form-row { display: flex; gap: 16px; }
+  .form-row .form-item { flex: 1; }
+
+  /* Permission tree */
+  .perm-section { margin-bottom: 24px; }
+  .perm-section-title { font-size: 14px; font-weight: 500; color: var(--ink); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--rule2); }
+  .perm-tree { border: 1px solid var(--rule2); border-radius: var(--radius); padding: 12px; max-height: 320px; overflow-y: auto; }
+  .perm-node { margin-bottom: 4px; }
+  .perm-node-row { display: flex; align-items: center; gap: 6px; padding: 4px 0; cursor: pointer; }
+  .perm-node-row:hover { color: var(--accent); }
+  .perm-toggle { width: 16px; text-align: center; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; }
+  .perm-children { margin-left: 22px; display: none; }
+  .perm-children.expanded { display: block; }
+  .perm-label { font-size: 14px; color: var(--ink); }
+  .perm-btn-list { margin-left: 22px; display: none; }
+  .perm-btn-list.expanded { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 0; }
+  .perm-btn-item { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid var(--rule2); border-radius: var(--radius); font-size: 12px; color: var(--ink2); cursor: pointer; transition: all 0.2s; }
+  .perm-btn-item:hover { border-color: var(--accent); }
+  .perm-btn-item.selected { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); }
+
+  /* Data scope options */
+  .scope-options { display: flex; flex-direction: column; gap: 8px; }
+  .scope-option { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--rule2); border-radius: var(--radius); cursor: pointer; transition: all 0.2s; }
+  .scope-option:hover { border-color: var(--accent); }
+  .scope-option.selected { border-color: var(--accent); background: var(--accent-bg); }
+  .scope-option-label { font-size: 14px; color: var(--ink); }
+  .scope-option-desc { font-size: 12px; color: var(--muted); }
+
+  /* Toast */
+  .toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--ink); color: #fff; padding: 8px 24px; border-radius: var(--radius); font-size: 14px; z-index: 9999; transition: transform 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--success); }
+  .toast.error { background: var(--danger); }
+  .toast.warning { background: var(--warning); }
+
+  .confirm-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+  .confirm-box { background: var(--bg2); border-radius: 8px; padding: 24px 28px; min-width: 360px; box-shadow: 0 4px 24px rgba(0,0,0,0.15); }
+  .confirm-text { font-size: 15px; color: var(--ink); margin-bottom: 20px; }
+  .confirm-btns { display: flex; gap: 12px; justify-content: flex-end; }
+
+  .pagination { display: flex; align-items: center; justify-content: flex-end; gap: 4px; padding: 12px 20px; border-top: 1px solid var(--rule2); flex-shrink: 0; }
+  .pagination-info { font-size: 13px; color: var(--muted); margin-right: 12px; }
+  .page-btn { min-width: 32px; height: 32px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--bg2); color: var(--ink2); font-size: 14px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; }
+  .page-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .page-btn.disabled { color: var(--muted2); cursor: not-allowed; pointer-events: none; }
+
+  @media (max-width: 1100px) {
+    .filter-bar { flex-direction: column; align-items: stretch; }
+    .filter-buttons { margin-left: 0; }
+    .filter-left-btns { margin-left: 0; }
+    .drawer { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="main-content">
+  <div class="page-card">
+    <div class="filter-bar">
+      <div class="filter-group">
+        <div class="filter-item">
+          <span class="filter-label">角色名称</span>
+          <input class="filter-input" id="filter-name" placeholder="请输入角色名称">
+        </div>
+        <div class="filter-item">
+          <span class="filter-label">角色编码</span>
+          <input class="filter-input" id="filter-code" placeholder="请输入角色编码">
+        </div>
+        <div class="filter-item">
+          <span class="filter-label">状态</span>
+          <select class="filter-select" id="filter-status">
+            <option value="">全部</option>
+            <option value="normal">正常</option>
+            <option value="disabled">停用</option>
+          </select>
+        </div>
+        <div class="filter-left-btns">
+          <button class="btn btn-primary" onclick="searchRoles()">查询</button>
+          <button class="btn btn-default" onclick="resetFilters()">重置</button>
+        </div>
+      </div>
+      <div class="filter-buttons">
+        <button class="btn btn-primary" onclick="openDrawer('add')">新增角色</button>
+        <button class="btn btn-danger disabled" id="btn-batch-delete" onclick="batchDelete()">批量删除</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:48px;text-align:center;">
+              <span class="checkbox" id="check-all" onclick="toggleSelectAll()"></span>
+            </th>
+            <th>角色名称</th>
+            <th>角色编码</th>
+            <th>数据范围</th>
+            <th>排序</th>
+            <th>状态</th>
+            <th>创建时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="role-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="pagination">
+      <span class="pagination-info" id="page-info">共 0 条</span>
+      <button class="page-btn disabled" id="page-prev" onclick="changePage(-1)">上一页</button>
+      <span id="page-numbers"></span>
+      <button class="page-btn disabled" id="page-next" onclick="changePage(1)">下一页</button>
+    </div>
+  </div>
+</div>
+
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <span class="drawer-title" id="drawer-title">新增角色</span>
+    <button class="drawer-close" onclick="closeDrawer()">×</button>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+  <div class="drawer-footer" id="drawer-footer"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ===== Mock Data =====
+  var menuTree = [
+    { id: 1, name: '设备发现', type: 'menu', children: [
+      { id: 11, name: '发现规则', type: 'menu', buttons: [
+        { id: 111, name: '新增', perm: 'discovery:add' },
+        { id: 112, name: '编辑', perm: 'discovery:edit' },
+        { id: 113, name: '删除', perm: 'discovery:del' },
+        { id: 114, name: '扫描', perm: 'discovery:scan' }
+      ]},
+      { id: 12, name: '设备列表', type: 'menu', buttons: [
+        { id: 121, name: '上架', perm: 'device:rack' },
+        { id: 122, name: '导出', perm: 'device:export' }
+      ]}
+    ]},
+    { id: 2, name: '监控设备', type: 'menu', children: [
+      { id: 21, name: '设备列表', type: 'menu', buttons: [
+        { id: 211, name: '启动监测', perm: 'monitor:start' },
+        { id: 212, name: '暂停监测', perm: 'monitor:pause' },
+        { id: 213, name: '监测设置', perm: 'monitor:set' }
+      ]}
+    ]},
+    { id: 3, name: '模板管理', type: 'menu', buttons: [
+      { id: 311, name: '新增', perm: 'template:add' },
+      { id: 312, name: '编辑', perm: 'template:edit' },
+      { id: 313, name: '删除', perm: 'template:del' }
+    ]},
+    { id: 4, name: '凭证管理', type: 'menu', buttons: [
+      { id: 411, name: '新增', perm: 'credential:add' },
+      { id: 412, name: '编辑', perm: 'credential:edit' },
+      { id: 413, name: '删除', perm: 'credential:del' }
+    ]},
+    { id: 5, name: '系统管理', type: 'menu', children: [
+      { id: 51, name: '用户管理', type: 'menu', buttons: [
+        { id: 511, name: '新增', perm: 'user:add' },
+        { id: 512, name: '编辑', perm: 'user:edit' },
+        { id: 513, name: '删除', perm: 'user:del' },
+        { id: 514, name: '重置密码', perm: 'user:reset' }
+      ]},
+      { id: 52, name: '角色管理', type: 'menu', buttons: [
+        { id: 521, name: '新增', perm: 'role:add' },
+        { id: 522, name: '编辑', perm: 'role:edit' },
+        { id: 523, name: '删除', perm: 'role:del' },
+        { id: 524, name: '权限分配', perm: 'role:perm' }
+      ]},
+      { id: 53, name: '部门管理', type: 'menu', buttons: [
+        { id: 531, name: '新增', perm: 'dept:add' },
+        { id: 532, name: '编辑', perm: 'dept:edit' },
+        { id: 533, name: '删除', perm: 'dept:del' }
+      ]},
+      { id: 54, name: '菜单管理', type: 'menu', buttons: [
+        { id: 541, name: '新增', perm: 'menu:add' },
+        { id: 542, name: '编辑', perm: 'menu:edit' },
+        { id: 543, name: '删除', perm: 'menu:del' }
+      ]},
+      { id: 55, name: '字典管理', type: 'menu', buttons: [
+        { id: 551, name: '新增', perm: 'dict:add' },
+        { id: 552, name: '编辑', perm: 'dict:edit' },
+        { id: 553, name: '删除', perm: 'dict:del' }
+      ]}
+    ]}
+  ];
+
+  var scopeOptions = [
+    { value: 'all', label: '全部数据', desc: '可查看所有数据' },
+    { value: 'custom', label: '自定义数据', desc: '可查看指定部门数据' },
+    { value: 'dept', label: '本部门数据', desc: '仅可查看本部门数据' },
+    { value: 'dept_below', label: '本部门及以下', desc: '可查看本部门及子部门数据' },
+    { value: 'self', label: '仅本人数据', desc: '仅可查看自己的数据' }
+  ];
+
+  var roles = [
+    { id: 1, name: '超级管理员', code: 'admin', scope: 'all', sort: 1, status: 'normal', remark: '拥有所有权限', menuIds: [], createTime: '2024-01-01 09:00:00', isSystem: true },
+    { id: 2, name: '运维人员', code: 'ops', scope: 'dept_below', sort: 2, status: 'normal', remark: '负责设备运维和监控', menuIds: [1, 11, 12, 111, 112, 113, 114, 121, 2, 21, 211, 212, 213, 3, 311, 312, 313, 4, 411, 412, 413], createTime: '2024-03-15 10:30:00' },
+    { id: 3, name: '安全审计员', code: 'auditor', scope: 'all', sort: 3, status: 'normal', remark: '查看系统审计日志', menuIds: [5, 51, 52, 53, 54, 55], createTime: '2024-05-20 14:00:00' },
+    { id: 4, name: '只读用户', code: 'viewer', scope: 'self', sort: 4, status: 'normal', remark: '仅查看权限', menuIds: [1, 12, 2, 21, 3, 4], createTime: '2024-06-10 11:20:00' },
+    { id: 5, name: '模板管理员', code: 'tpl_mgr', scope: 'dept', sort: 5, status: 'normal', remark: '管理采集模板', menuIds: [3, 311, 312, 313], createTime: '2024-08-12 16:00:00' },
+    { id: 6, name: '设备操作员', code: 'device_op', scope: 'dept_below', sort: 6, status: 'disabled', remark: '设备上架和监测操作', menuIds: [1, 11, 12, 111, 112, 114, 121, 122, 2, 21, 211, 212, 213], createTime: '2024-10-05 09:15:00' }
+  ];
+
+  var filteredRoles = roles.slice();
+  var selectedIds = {};
+  var currentPage = 1;
+  var pageSize = 10;
+  var drawerMode = 'add';
+  var editRoleId = null;
+  var tempMenuIds = [];
+  var tempScope = 'all';
+
+  // ===== Toast =====
+  var toastTimer;
+  function showToast(msg, type) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() { el.className = 'toast'; }, 3000);
+  }
+
+  // ===== Filter =====
+  window.searchRoles = function() { currentPage = 1; applyFilter(); };
+  window.resetFilters = function() {
+    document.getElementById('filter-name').value = '';
+    document.getElementById('filter-code').value = '';
+    document.getElementById('filter-status').value = '';
+    currentPage = 1;
+    applyFilter();
+  };
+
+  function applyFilter() {
+    var qName = document.getElementById('filter-name').value.trim().toLowerCase();
+    var qCode = document.getElementById('filter-code').value.trim().toLowerCase();
+    var qStatus = document.getElementById('filter-status').value;
+    filteredRoles = roles.filter(function(r) {
+      var matchName = !qName || r.name.toLowerCase().indexOf(qName) >= 0;
+      var matchCode = !qCode || r.code.toLowerCase().indexOf(qCode) >= 0;
+      var matchStatus = !qStatus || r.status === qStatus;
+      return matchName && matchCode && matchStatus;
+    });
+    renderTable();
+  }
+
+  // ===== Scope label =====
+  function getScopeLabel(val) {
+    var s = scopeOptions.find(function(x) { return x.value === val; });
+    return s ? s.label : val;
+  }
+
+  // ===== Table =====
+  function renderTable() {
+    var tbody = document.getElementById('role-tbody');
+    var total = filteredRoles.length;
+    var totalPages = Math.max(1, Math.ceil(total / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+    var start = (currentPage - 1) * pageSize;
+    var pageData = filteredRoles.slice(start, start + pageSize);
+
+    if (pageData.length === 0) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">暂无数据</td></tr>';
+    } else {
+      tbody.innerHTML = pageData.map(function(r) {
+        var checked = selectedIds[r.id] ? ' checked' : '';
+        var statusHtml = r.status === 'normal' ? '<span class="status-tag normal">正常</span>' : '<span class="status-tag disabled">停用</span>';
+        var toggleText = r.status === 'normal' ? '停用' : '启用';
+        var toggleClass = r.status === 'normal' ? 'warning' : '';
+        var isSystem = r.isSystem ? ' <span style="font-size:12px;color:var(--muted);">(系统内置)</span>' : '';
+        var editDisabled = r.isSystem ? ' disabled' : '';
+        var editStyle = r.isSystem ? ' style="color:var(--muted2);cursor:not-allowed;"' : '';
+        return '<tr class="' + (selectedIds[r.id] ? 'selected' : '') + '">' +
+          '<td style="text-align:center;"><span class="checkbox' + checked + '" onclick="toggleSelect(' + r.id + ')"></span></td>' +
+          '<td>' + r.name + isSystem + '</td>' +
+          '<td>' + r.code + '</td>' +
+          '<td><span class="scope-tag">' + getScopeLabel(r.scope) + '</span></td>' +
+          '<td>' + r.sort + '</td>' +
+          '<td>' + statusHtml + '</td>' +
+          '<td>' + r.createTime + '</td>' +
+          '<td><div class="action-group">' +
+            '<button class="btn-text"' + editStyle + ' onclick="openDrawer(\'edit\',' + r.id + ')">编辑</button>' +
+            '<button class="btn-text" onclick="openPermDrawer(' + r.id + ')">权限分配</button>' +
+            '<button class="btn-text ' + toggleClass + '"' + editDisabled + ' onclick="toggleStatus(' + r.id + ')">' + toggleText + '</button>' +
+            '<button class="btn-text danger"' + (r.isSystem ? ' disabled style="color:var(--muted2);cursor:not-allowed;"' : '') + ' onclick="deleteRole(' + r.id + ')">删除</button>' +
+          '</div></td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    document.getElementById('page-info').textContent = '共 ' + total + ' 条';
+    document.getElementById('page-prev').className = 'page-btn' + (currentPage <= 1 ? ' disabled' : '');
+    document.getElementById('page-next').className = 'page-btn' + (currentPage >= totalPages ? ' disabled' : '');
+    var numsHtml = '';
+    for (var i = 1; i <= totalPages; i++) {
+      numsHtml += '<button class="page-btn' + (i === currentPage ? ' active' : '') + '" onclick="goToPage(' + i + ')">' + i + '</button>';
+    }
+    document.getElementById('page-numbers').innerHTML = numsHtml;
+    updateSelectAll();
+    updateBatchButton();
+  }
+
+  window.goToPage = function(p) { currentPage = p; renderTable(); };
+  window.changePage = function(d) {
+    var totalPages = Math.max(1, Math.ceil(filteredRoles.length / pageSize));
+    var np = currentPage + d;
+    if (np < 1 || np > totalPages) return;
+    currentPage = np; renderTable();
+  };
+
+  // ===== Selection =====
+  window.toggleSelect = function(id) {
+    if (selectedIds[id]) delete selectedIds[id];
+    else selectedIds[id] = true;
+    renderTable();
+  };
+  window.toggleSelectAll = function() {
+    var pageIds = filteredRoles.slice((currentPage - 1) * pageSize, currentPage * pageSize).map(function(r) { return r.id; });
+    var allSelected = pageIds.every(function(id) { return selectedIds[id]; });
+    if (allSelected) pageIds.forEach(function(id) { delete selectedIds[id]; });
+    else pageIds.forEach(function(id) { selectedIds[id] = true; });
+    renderTable();
+  };
+  function updateSelectAll() {
+    var pageIds = filteredRoles.slice((currentPage - 1) * pageSize, currentPage * pageSize).map(function(r) { return r.id; });
+    var el = document.getElementById('check-all');
+    if (pageIds.length === 0) { el.className = 'checkbox'; return; }
+    var count = pageIds.filter(function(id) { return selectedIds[id]; }).length;
+    if (count === pageIds.length) el.className = 'checkbox checked';
+    else if (count > 0) el.className = 'checkbox indeterminate';
+    else el.className = 'checkbox';
+  }
+  function updateBatchButton() {
+    var count = Object.keys(selectedIds).filter(function(k) { return selectedIds[k]; }).length;
+    var btn = document.getElementById('btn-batch-delete');
+    if (count > 0) btn.classList.remove('disabled');
+    else btn.classList.add('disabled');
+  }
+
+  // ===== Confirm =====
+  function showConfirm(text, onConfirm) {
+    var mask = document.createElement('div');
+    mask.className = 'confirm-mask';
+    mask.innerHTML = '<div class="confirm-box"><div class="confirm-text">' + text + '</div><div class="confirm-btns"><button class="btn btn-default" id="confirm-cancel">取消</button><button class="btn btn-danger" id="confirm-ok">确定</button></div></div>';
+    document.body.appendChild(mask);
+    document.getElementById('confirm-cancel').onclick = function() { document.body.removeChild(mask); };
+    document.getElementById('confirm-ok').onclick = function() { document.body.removeChild(mask); onConfirm(); };
+  }
+
+  // ===== Actions =====
+  window.toggleStatus = function(id) {
+    var r = roles.find(function(x) { return x.id === id; });
+    if (!r || r.isSystem) return;
+    r.status = r.status === 'normal' ? 'disabled' : 'normal';
+    renderTable();
+    showToast(r.status === 'normal' ? '已启用角色 ' + r.name : '已停用角色 ' + r.name, 'success');
+  };
+  window.deleteRole = function(id) {
+    var r = roles.find(function(x) { return x.id === id; });
+    if (!r || r.isSystem) return;
+    showConfirm('确定删除角色「' + r.name + '」吗？', function() {
+      roles = roles.filter(function(x) { return x.id !== id; });
+      delete selectedIds[id];
+      applyFilter();
+      showToast('已删除角色 ' + r.name, 'success');
+    });
+  };
+  window.batchDelete = function() {
+    var ids = Object.keys(selectedIds).filter(function(k) { return selectedIds[k]; }).map(Number);
+    if (ids.length === 0) { showToast('请先选择要删除的角色', 'warning'); return; }
+    var hasSystem = ids.some(function(id) { var r = roles.find(function(x) { return x.id === id; }); return r && r.isSystem; });
+    if (hasSystem) { showToast('系统内置角色不可删除', 'error'); return; }
+    showConfirm('确定删除选中的 ' + ids.length + ' 个角色吗？', function() {
+      roles = roles.filter(function(x) { return !selectedIds[x.id] || x.isSystem; });
+      selectedIds = {};
+      applyFilter();
+      showToast('已删除 ' + ids.length + ' 个角色', 'success');
+    });
+  };
+
+  // ===== Drawer =====
+  window.openDrawer = function(mode, id) {
+    drawerMode = mode || 'add';
+    editRoleId = id || null;
+    var r = null;
+    if (mode === 'edit' && id) {
+      r = roles.find(function(x) { return x.id === id; });
+      if (!r) return;
+    }
+    var isSystem = r && r.isSystem;
+    // Initialize permission temp data
+    tempMenuIds = r ? r.menuIds.slice() : [];
+    tempScope = r ? r.scope : 'self';
+    if (isSystem) tempMenuIds = collectAllMenuIds(menuTree);
+    document.getElementById('drawer-title').textContent = mode === 'edit' ? '编辑角色' : '新增角色';
+    document.getElementById('drawer-body').innerHTML = getFormHTML(r, isSystem);
+    document.getElementById('drawer-footer').innerHTML =
+      '<button class="btn btn-default" onclick="closeDrawer()">取消</button>' +
+      (isSystem ? '' : '<button class="btn btn-primary" onclick="saveRole()">确定</button>');
+    document.getElementById('drawer-overlay').classList.add('show');
+    document.getElementById('drawer').classList.add('show');
+  };
+
+  window.closeDrawer = function() {
+    document.getElementById('drawer-overlay').classList.remove('show');
+    document.getElementById('drawer').classList.remove('show');
+  };
+
+  function getFormHTML(r) {
+    var name = r ? r.name : '';
+    var code = r ? r.code : '';
+    var sort = r ? r.sort : '';
+    var remark = r ? r.remark : '';
+    var isEdit = r ? true : false;
+    var isSystem = r && r.isSystem;
+    var permDisabled = isSystem;
+
+    return (
+      '<div class="form-row">' +
+        '<div class="form-item">' +
+          '<div class="form-item-label"><span class="required-mark">*</span><span class="form-item-label-text">角色名称</span></div>' +
+          '<input class="form-input" id="f-name" value="' + name + '" placeholder="请输入角色名称" maxlength="20"' + (isSystem ? ' disabled' : '') + '>' +
+        '</div>' +
+        '<div class="form-item">' +
+          '<div class="form-item-label"><span class="required-mark">*</span><span class="form-item-label-text">角色编码</span></div>' +
+          '<input class="form-input" id="f-code" value="' + code + '" placeholder="请输入角色编码" maxlength="30"' + (isEdit ? ' disabled' : '') + '>' +
+          (isEdit ? '<div class="form-hint">角色编码创建后不可修改</div>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="form-row">' +
+        '<div class="form-item">' +
+          '<div class="form-item-label"><span class="form-item-label-text">排序</span></div>' +
+          '<input class="form-input" id="f-sort" type="number" value="' + sort + '" placeholder="数字越小越靠前" min="0"' + (isSystem ? ' disabled' : '') + '>' +
+        '</div>' +
+        '<div class="form-item">' +
+          '<div class="form-item-label"><span class="form-item-label-text">状态</span></div>' +
+          '<select class="form-select" id="f-status"' + (isSystem ? ' disabled' : '') + '>' +
+            '<option value="normal"' + (r && r.status === 'normal' ? ' selected' : '') + '>正常</option>' +
+            '<option value="disabled"' + (r && r.status === 'disabled' ? ' selected' : '') + '>停用</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+      '<div class="form-item">' +
+        '<div class="form-item-label"><span class="form-item-label-text">备注</span></div>' +
+        '<textarea class="form-textarea" id="f-remark" placeholder="请输入备注" maxlength="100"' + (isSystem ? ' disabled' : '') + '>' + remark + '</textarea>' +
+      '</div>' +
+      '<div class="perm-section">' +
+        '<div class="perm-section-title">数据范围</div>' +
+        '<div class="scope-options" id="scope-options"' + (permDisabled ? ' style="opacity:0.6;pointer-events:none;"' : '') + '>' +
+          scopeOptions.map(function(s) {
+            return '<div class="scope-option' + (tempScope === s.value ? ' selected' : '') + '" onclick="selectScope(\'' + s.value + '\')" data-val="' + s.value + '">' +
+              '<span class="checkbox' + (tempScope === s.value ? ' checked' : '') + '"></span>' +
+              '<div><div class="scope-option-label">' + s.label + '</div>' +
+              '<div class="scope-option-desc">' + s.desc + '</div></div>' +
+            '</div>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
+      '<div class="perm-section">' +
+        '<div class="perm-section-title">菜单权限</div>' +
+        '<div class="perm-tree" id="perm-tree"' + (permDisabled ? ' style="opacity:0.6;pointer-events:none;"' : '') + '>' + renderPermTree(menuTree) + '</div>' +
+      '</div>'
+    );
+  }
+
+  window.saveRole = function() {
+    var name = document.getElementById('f-name').value.trim();
+    var code = document.getElementById('f-code').value.trim();
+    var sort = parseInt(document.getElementById('f-sort').value) || 0;
+    var status = document.getElementById('f-status').value;
+    var remark = document.getElementById('f-remark').value.trim();
+
+    if (!name) { showToast('请输入角色名称', 'warning'); return; }
+    if (!code) { showToast('请输入角色编码', 'warning'); return; }
+
+    if (drawerMode === 'add') {
+      if (roles.some(function(r) { return r.code === code; })) { showToast('角色编码已存在', 'error'); return; }
+      var newId = Math.max.apply(null, roles.map(function(r) { return r.id; })) + 1;
+      var now = new Date();
+      var nowStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0') + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ':' + String(now.getSeconds()).padStart(2, '0');
+      roles.push({ id: newId, name: name, code: code, scope: tempScope, sort: sort, status: status, remark: remark, menuIds: tempMenuIds.slice(), createTime: nowStr });
+      showToast('已新增角色 ' + name, 'success');
+    } else {
+      var r = roles.find(function(x) { return x.id === editRoleId; });
+      if (r && !r.isSystem) {
+        r.name = name; r.sort = sort; r.status = status; r.remark = remark;
+        r.menuIds = tempMenuIds.slice(); r.scope = tempScope;
+      }
+      showToast('已更新角色 ' + name, 'success');
+    }
+    closeDrawer();
+    applyFilter();
+  };
+
+  // ===== Permission Drawer =====
+  window.openPermDrawer = function(id) {
+    var r = roles.find(function(x) { return x.id === id; });
+    if (!r) return;
+    editRoleId = id;
+    tempMenuIds = r.menuIds.slice();
+    tempScope = r.scope;
+    if (r.isSystem) tempMenuIds = collectAllMenuIds(menuTree);
+
+    document.getElementById('drawer-title').textContent = '权限分配 - ' + r.name;
+    document.getElementById('drawer-body').innerHTML = getPermHTML();
+    document.getElementById('drawer-footer').innerHTML =
+      '<button class="btn btn-default" onclick="closeDrawer()">取消</button>' +
+      '<button class="btn btn-primary" onclick="savePerm()">保存</button>';
+    document.getElementById('drawer-overlay').classList.add('show');
+    document.getElementById('drawer').classList.add('show');
+  };
+
+  function collectAllMenuIds(tree) {
+    var ids = [];
+    function walk(list) {
+      list.forEach(function(n) {
+        ids.push(n.id);
+        if (n.buttons) n.buttons.forEach(function(b) { ids.push(b.id); });
+        if (n.children) walk(n.children);
+      });
+    }
+    walk(tree);
+    return ids;
+  }
+
+  function getPermHTML() {
+    // Data scope
+    var scopeHtml = '<div class="perm-section">' +
+      '<div class="perm-section-title">数据范围</div>' +
+      '<div class="scope-options" id="scope-options">' +
+        scopeOptions.map(function(s) {
+          return '<div class="scope-option' + (tempScope === s.value ? ' selected' : '') + '" onclick="selectScope(\'' + s.value + '\')" data-val="' + s.value + '">' +
+            '<span class="checkbox' + (tempScope === s.value ? ' checked' : '') + '"></span>' +
+            '<div><div class="scope-option-label">' + s.label + '</div>' +
+            '<div class="scope-option-desc">' + s.desc + '</div></div>' +
+          '</div>';
+        }).join('') +
+      '</div></div>';
+
+    // Menu permission tree
+    var treeHtml = '<div class="perm-section">' +
+      '<div class="perm-section-title">菜单权限</div>' +
+      '<div class="perm-tree" id="perm-tree">' + renderPermTree(menuTree) + '</div></div>';
+
+    return scopeHtml + treeHtml;
+  }
+
+  function renderPermTree(nodes) {
+    return nodes.map(function(n) {
+      var hasChildren = n.children && n.children.length > 0;
+      var hasButtons = n.buttons && n.buttons.length > 0;
+      var checked = tempMenuIds.indexOf(n.id) >= 0;
+      var toggle = hasChildren || hasButtons ? '<span class="perm-toggle" onclick="togglePermNode(this)">▶</span>' : '<span class="perm-toggle"></span>';
+      var html = '<div class="perm-node">' +
+        '<div class="perm-node-row">' + toggle +
+          '<span class="checkbox' + (checked ? ' checked' : '') + '" onclick="togglePermCheck(' + n.id + ', this)"></span>' +
+          '<span class="perm-label">' + n.name + '</span>' +
+        '</div>';
+      if (hasButtons) {
+        html += '<div class="perm-btn-list">' + n.buttons.map(function(b) {
+          var bChecked = tempMenuIds.indexOf(b.id) >= 0;
+          return '<span class="perm-btn-item' + (bChecked ? ' selected' : '') + '" onclick="togglePermBtn(' + b.id + ', this)">' +
+            '<span class="checkbox' + (bChecked ? ' checked' : '') + '" style="width:14px;height:14px;"></span>' + b.name + '</span>';
+        }).join('') + '</div>';
+      }
+      if (hasChildren) {
+        html += '<div class="perm-children">' + renderPermTree(n.children) + '</div>';
+      }
+      html += '</div>';
+      return html;
+    }).join('');
+  }
+
+  window.togglePermNode = function(el) {
+    var next = el.parentElement.nextElementSibling;
+    if (next && (next.classList.contains('perm-children') || next.classList.contains('perm-btn-list'))) {
+      next.classList.toggle('expanded');
+      el.textContent = next.classList.contains('expanded') ? '▼' : '▶';
+    }
+  };
+
+  window.togglePermCheck = function(id, el) {
+    var idx = tempMenuIds.indexOf(id);
+    if (idx >= 0) tempMenuIds.splice(idx, 1);
+    else tempMenuIds.push(id);
+    el.classList.toggle('checked');
+  };
+
+  window.togglePermBtn = function(id, el) {
+    var idx = tempMenuIds.indexOf(id);
+    if (idx >= 0) tempMenuIds.splice(idx, 1);
+    else tempMenuIds.push(id);
+    el.classList.toggle('selected');
+    var cb = el.querySelector('.checkbox');
+    cb.classList.toggle('checked');
+  };
+
+  window.selectScope = function(val) {
+    tempScope = val;
+    document.querySelectorAll('.scope-option').forEach(function(el) {
+      var isSelected = el.dataset.val === val;
+      el.classList.toggle('selected', isSelected);
+      var cb = el.querySelector('.checkbox');
+      cb.className = 'checkbox' + (isSelected ? ' checked' : '');
+    });
+  };
+
+  window.savePerm = function() {
+    var r = roles.find(function(x) { return x.id === editRoleId; });
+    if (!r) return;
+    if (!r.isSystem) {
+      r.menuIds = tempMenuIds.slice();
+      r.scope = tempScope;
+    }
+    closeDrawer();
+    showToast('已保存角色「' + r.name + '」的权限配置', 'success');
+  };
+
+  // ===== Init =====
+  applyFilter();
+</script>
+
+
+</body></html>

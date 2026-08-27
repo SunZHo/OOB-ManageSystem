@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>部门管理 - 带外管理系统</title>
+<style>
+  :root {
+    --bg: #f0f2f5;
+    --bg2: #ffffff;
+    --bg3: #fafafa;
+    --ink: #303133;
+    --ink2: #606266;
+    --muted: #909399;
+    --muted2: #c0c4cc;
+    --muted3: #dcdfe6;
+    --rule: #dcdfe6;
+    --rule2: #ebeef5;
+    --accent: #409eff;
+    --accent-hover: #66b1ff;
+    --accent-active: #3a8ee6;
+    --accent-bg: #ecf5ff;
+    --accent-light: #e6f7ff;
+    --danger: #f56c6c;
+    --danger-hover: #f78989;
+    --danger-bg: #fef0f0;
+    --success: #67c23a;
+    --success-bg: #f0f9eb;
+    --warning: #e6a23c;
+    --warning-bg: #fdf6ec;
+    --header-bg: #fafafa;
+    --radius: 4px;
+    --radius-sm: 4px;
+    --shadow: 0 2px 12px 0 rgba(0,0,0,0.06);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+    background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.5; overflow: hidden;
+  }
+
+  .main-content { height: 100vh; display: flex; flex-direction: column; padding: 16px 24px; }
+  .page-card { background: var(--bg2); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+  /* Layout: left tree + right table */
+  .dept-layout { display: flex; flex: 1; min-height: 0; }
+
+  /* Left tree panel */
+  .dept-tree-panel {
+    width: 280px; flex-shrink: 0;
+    border-right: 1px solid var(--rule2);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .dept-tree-header {
+    padding: 12px 16px; border-bottom: 1px solid var(--rule2);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .dept-tree-title { font-size: 14px; font-weight: 500; color: var(--ink); }
+  .dept-tree-search { padding: 8px 16px; border-bottom: 1px solid var(--rule2); flex-shrink: 0; position: relative; }
+  .dept-tree-search .filter-input { width: 100%; padding-left: 28px; }
+  .dept-tree-search .search-icon { position: absolute; left: 24px; top: 50%; transform: translateY(-50%); color: var(--muted2); font-size: 14px; }
+  .dept-tree-body { flex: 1; overflow-y: auto; padding: 8px 0; }
+
+  /* Tree nodes */
+  .tree-node { margin-bottom: 2px; }
+  .tree-node-row {
+    display: flex; align-items: center; gap: 4px;
+    padding: 4px 16px; cursor: pointer; transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .tree-node-row:hover { background: var(--bg3); }
+  .tree-node-row.active { background: var(--accent-bg); color: var(--accent); }
+  .tree-toggle { width: 16px; text-align: center; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; flex-shrink: 0; }
+  .tree-icon { font-size: 14px; color: var(--accent); flex-shrink: 0; }
+  .tree-label { font-size: 14px; overflow: hidden; text-overflow: ellipsis; }
+  .tree-count { font-size: 12px; color: var(--muted); margin-left: auto; padding-right: 4px; }
+  .tree-children { display: none; }
+  .tree-children.expanded { display: block; }
+
+  /* Right panel */
+  .dept-right-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .filter-bar { display: flex; align-items: flex-start; gap: 12px; padding: 16px 20px; flex-wrap: wrap; flex-shrink: 0; border-bottom: 1px solid var(--rule2); }
+  .filter-group { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .filter-item { display: flex; align-items: center; gap: 8px; }
+  .filter-label { font-size: 14px; color: var(--ink2); white-space: nowrap; }
+  .filter-input { width: 180px; height: 32px; border: 1px solid var(--rule); border-radius: var(--radius); padding: 0 12px; font-size: 14px; color: var(--ink); background: var(--bg2); outline: none; transition: border-color 0.2s; font-family: inherit; }
+  .filter-input:focus { border-color: var(--accent); }
+  .filter-input::placeholder { color: var(--muted2); }
+  .filter-select { width: 160px; height: 32px; border: 1px solid var(--rule); border-radius: var(--radius); padding: 0 32px 0 12px; font-size: 14px; color: var(--ink); background: var(--bg2); outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23909399' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; transition: border-color 0.2s; }
+  .filter-select:focus { border-color: var(--accent); }
+  .filter-buttons { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+  .filter-left-btns { display: flex; align-items: center; gap: 8px; }
+
+  /* Breadcrumb */
+  .dept-breadcrumb { padding: 12px 20px; border-bottom: 1px solid var(--rule2); flex-shrink: 0; display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
+  .dept-breadcrumb .crumb { cursor: pointer; transition: color 0.2s; }
+  .dept-breadcrumb .crumb:hover { color: var(--accent); }
+  .dept-breadcrumb .crumb.active { color: var(--ink); font-weight: 500; cursor: default; }
+  .dept-breadcrumb .crumb-sep { color: var(--muted2); }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 32px; padding: 0 16px; border: 1px solid var(--rule); border-radius: var(--radius); font-size: 14px; cursor: pointer; transition: all 0.2s; background: var(--bg2); color: var(--ink); font-family: inherit; white-space: nowrap; }
+  .btn:hover { color: var(--accent); border-color: var(--accent); }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
+  .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .btn-danger:hover { background: var(--danger-hover); border-color: var(--danger-hover); color: #fff; }
+  .btn-default { background: var(--bg2); }
+  .btn.disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+
+  .table-wrap { flex: 1; overflow: auto; min-height: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead th { background: var(--header-bg); color: var(--ink2); font-weight: 500; text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--rule2); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+  tbody td { padding: 12px 16px; border-bottom: 1px solid var(--rule2); color: var(--ink); white-space: nowrap; }
+  tbody tr:hover { background: var(--bg3); }
+  tbody tr.selected { background: var(--accent-light); }
+  .empty-row td { text-align: center; padding: 60px 0; color: var(--muted); }
+
+  .checkbox { display: inline-block; width: 16px; height: 16px; border: 1px solid var(--muted2); border-radius: 3px; cursor: pointer; position: relative; transition: all 0.2s; vertical-align: middle; }
+  .checkbox.checked { background: var(--accent); border-color: var(--accent); }
+  .checkbox.checked::after { content: ''; position: absolute; left: 4px; top: 1px; width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .checkbox.indeterminate { background: var(--accent); border-color: var(--accent); }
+  .checkbox.indeterminate::after { content: ''; position: absolute; left: 3px; top: 7px; width: 8px; height: 2px; background: #fff; }
+
+  .status-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--radius); font-size: 12px; line-height: 1.5; }
+  .status-tag.normal { color: var(--success); background: var(--success-bg); }
+  .status-tag.disabled { color: var(--danger); background: var(--danger-bg); }
+  .status-tag::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .btn-text { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 14px; padding: 0; transition: color 0.2s; font-family: inherit; }
+  .btn-text:hover { color: var(--accent-hover); }
+  .btn-text.danger { color: var(--danger); }
+  .btn-text.danger:hover { color: var(--danger-hover); }
+  .btn-text.warning { color: var(--warning); }
+  .btn-text.warning:hover { opacity: 0.8; }
+  .action-group { display: flex; gap: 12px; }
+
+  /* Drawer */
+  .drawer-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s; }
+  .drawer-overlay.show { opacity: 1; visibility: visible; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 520px; background: var(--bg2); z-index: 1001; transform: translateX(100%); transition: transform 0.3s; display: flex; flex-direction: column; box-shadow: -4px 0 16px rgba(0,0,0,0.08); }
+  .drawer.show { transform: translateX(0); }
+  .drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid var(--rule2); flex-shrink: 0; }
+  .drawer-title { font-size: 16px; font-weight: 500; color: var(--ink); }
+  .drawer-close { background: none; border: none; font-size: 20px; color: var(--muted); cursor: pointer; padding: 0; line-height: 1; transition: color 0.2s; }
+  .drawer-close:hover { color: var(--ink); }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 24px; }
+  .drawer-footer { padding: 12px 24px; border-top: 1px solid var(--rule2); display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+
+  /* Form */
+  .form-item { margin-bottom: 22px; }
+  .form-item:last-child { margin-bottom: 0; }
+  .form-item-label { display: flex; align-items: center; gap: 2px; margin-bottom: 8px; }
+  .required-mark { color: var(--danger); font-size: 14px; margin-right: 2px; line-height: 1; }
+  .form-item-label-text { font-size: 14px; color: var(--ink); }
+  .form-input { width: 100%; height: 34px; border: 1px solid var(--rule); border-radius: var(--radius-sm); padding: 0 12px; font-size: 14px; color: var(--ink); background: var(--bg2); outline: none; transition: all 0.2s; font-family: inherit; }
+  .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(64,158,255,0.08); }
+  .form-input:disabled { background: var(--bg3); color: var(--muted); cursor: not-allowed; }
+  .form-select { width: 100%; height: 34px; border: 1px solid var(--rule); border-radius: var(--radius-sm); padding: 0 32px 0 12px; font-size: 14px; color: var(--ink); background: var(--bg2); outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23909399' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+  .form-select:focus { border-color: var(--accent); }
+  .form-textarea { width: 100%; min-height: 80px; border: 1px solid var(--rule); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 14px; color: var(--ink); background: var(--bg2); outline: none; transition: all 0.2s; font-family: inherit; resize: vertical; }
+  .form-textarea:focus { border-color: var(--accent); }
+  .form-hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .form-row { display: flex; gap: 16px; }
+  .form-row .form-item { flex: 1; }
+
+  /* Tree select for parent dept */
+  .tree-select { border: 1px solid var(--rule); border-radius: var(--radius-sm); max-height: 240px; overflow-y: auto; padding: 8px 0; }
+  .tree-select .tree-node-row { padding: 4px 12px; }
+
+  /* Toast */
+  .toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--ink); color: #fff; padding: 8px 24px; border-radius: var(--radius); font-size: 14px; z-index: 9999; transition: transform 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--success); }
+  .toast.error { background: var(--danger); }
+  .toast.warning { background: var(--warning); }
+
+  .confirm-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+  .confirm-box { background: var(--bg2); border-radius: 8px; padding: 24px 28px; min-width: 360px; box-shadow: 0 4px 24px rgba(0,0,0,0.15); }
+  .confirm-text { font-size: 15px; color: var(--ink); margin-bottom: 20px; }
+  .confirm-btns { display: flex; gap: 12px; justify-content: flex-end; }
+
+  .pagination { display: flex; align-items: center; justify-content: flex-end; gap: 4px; padding: 12px 20px; border-top: 1px solid var(--rule2); flex-shrink: 0; }
+  .pagination-info { font-size: 13px; color: var(--muted); margin-right: 12px; }
+  .page-btn { min-width: 32px; height: 32px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--bg2); color: var(--ink2); font-size: 14px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; }
+  .page-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .page-btn.disabled { color: var(--muted2); cursor: not-allowed; pointer-events: none; }
+
+  @media (max-width: 900px) {
+    .dept-layout { flex-direction: column; }
+    .dept-tree-panel { width: 100%; height: 240px; border-right: none; border-bottom: 1px solid var(--rule2); }
+    .filter-bar { flex-direction: column; align-items: stretch; }
+    .filter-buttons { margin-left: 0; }
+    .drawer { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="main-content">
+  <div class="page-card">
+    <div class="dept-layout">
+      <!-- Left tree -->
+      <div class="dept-tree-panel">
+        <div class="dept-tree-header">
+          <span class="dept-tree-title">部门树</span>
+          <button class="btn btn-primary btn-sm" style="height:28px;padding:0 12px;font-size:13px;" onclick="openDrawer('add', null)">新增部门</button>
+        </div>
+        <div class="dept-tree-search">
+          <span class="search-icon">🔍</span>
+          <input class="filter-input" id="tree-search" placeholder="搜索部门名称" oninput="filterTree()">
+        </div>
+        <div class="dept-tree-body" id="dept-tree"></div>
+      </div>
+
+      <!-- Right panel -->
+      <div class="dept-right-panel">
+        <div class="dept-breadcrumb" id="dept-breadcrumb"></div>
+        <div class="filter-bar">
+          <div class="filter-group">
+            <div class="filter-item">
+              <span class="filter-label">部门名称</span>
+              <input class="filter-input" id="filter-name" placeholder="请输入部门名称">
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">负责人</span>
+              <input class="filter-input" id="filter-leader" placeholder="请输入负责人">
+            </div>
+            <div class="filter-item">
+              <span class="filter-label">状态</span>
+              <select class="filter-select" id="filter-status">
+                <option value="">全部</option>
+                <option value="normal">正常</option>
+                <option value="disabled">停用</option>
+              </select>
+            </div>
+            <div class="filter-left-btns">
+              <button class="btn btn-primary" onclick="searchDepts()">查询</button>
+              <button class="btn btn-default" onclick="resetFilters()">重置</button>
+            </div>
+          </div>
+          <div class="filter-buttons">
+            <button class="btn btn-primary" onclick="openDrawer('add', currentDeptId)">新增子部门</button>
+            <button class="btn btn-danger disabled" id="btn-batch-delete" onclick="batchDelete()">批量删除</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:48px;text-align:center;">
+                  <span class="checkbox" id="check-all" onclick="toggleSelectAll()"></span>
+                </th>
+                <th>部门名称</th>
+                <th>负责人</th>
+                <th>联系电话</th>
+                <th>邮箱</th>
+                <th>排序</th>
+                <th>状态</th>
+                <th>创建时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="dept-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <span class="pagination-info" id="page-info">共 0 条</span>
+          <button class="page-btn disabled" id="page-prev" onclick="changePage(-1)">上一页</button>
+          <span id="page-numbers"></span>
+          <button class="page-btn disabled" id="page-next" onclick="changePage(1)">下一页</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Drawer -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <span class="drawer-title" id="drawer-title">新增部门</span>
+    <button class="drawer-close" onclick="closeDrawer()">×</button>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+  <div class="drawer-footer" id="drawer-footer"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ===== Mock Data =====
+  var departments = [
+    { id: 1, name: '总公司', parentId: null, leader: '张总', phone: '13800138000', email: 'zhangzong@example.com', sort: 1, status: 'normal', createTime: '2024-01-01 09:00:00' },
+    { id: 2, name: '研发中心', parentId: 1, leader: '李工', phone: '13800138011', email: 'ligong@example.com', sort: 1, status: 'normal', createTime: '2024-01-05 10:00:00' },
+    { id: 3, name: '运维中心', parentId: 1, leader: '王工', phone: '13800138012', email: 'wanggong@example.com', sort: 2, status: 'normal', createTime: '2024-01-05 10:10:00' },
+    { id: 4, name: '安全中心', parentId: 1, leader: '赵主管', phone: '13800138013', email: 'zhaozg@example.com', sort: 3, status: 'normal', createTime: '2024-01-05 10:20:00' },
+    { id: 5, name: '前端组', parentId: 2, leader: '孙组长', phone: '13800138021', email: 'sunzz@example.com', sort: 1, status: 'normal', createTime: '2024-02-01 09:00:00' },
+    { id: 6, name: '后端组', parentId: 2, leader: '周组长', phone: '13800138022', email: 'zhouzz@example.com', sort: 2, status: 'normal', createTime: '2024-02-01 09:10:00' },
+    { id: 7, name: '测试组', parentId: 2, leader: '吴组长', phone: '13800138023', email: 'wuzz@example.com', sort: 3, status: 'disabled', createTime: '2024-02-01 09:20:00' },
+    { id: 8, name: '网络运维组', parentId: 3, leader: '郑组长', phone: '13800138031', email: 'zhengzz@example.com', sort: 1, status: 'normal', createTime: '2024-02-10 09:00:00' },
+    { id: 9, name: '系统运维组', parentId: 3, leader: '钱组长', phone: '13800138032', email: 'qianzz@example.com', sort: 2, status: 'normal', createTime: '2024-02-10 09:10:00' },
+    { id: 10, name: '安全管理组', parentId: 4, leader: '冯组长', phone: '13800138041', email: 'fengzz@example.com', sort: 1, status: 'normal', createTime: '2024-02-15 09:00:00' },
+    { id: 11, name: '渗透测试组', parentId: 4, leader: '陈组长', phone: '13800138042', email: 'chenzz@example.com', sort: 2, status: 'normal', createTime: '2024-02-15 09:10:00' }
+  ];
+
+  var currentDeptId = null; // selected dept in tree
+  var selectedIds = {};
+  var currentPage = 1;
+  var pageSize = 10;
+  var drawerMode = 'add';
+  var editDeptId = null;
+  var expandedNodes = {}; // track expanded state
+  var treeSearchKeyword = '';
+
+  // ===== Toast =====
+  var toastTimer;
+  function showToast(msg, type) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() { el.className = 'toast'; }, 3000);
+  }
+
+  // ===== Tree helpers =====
+  function getChildDepts(parentId) {
+    return departments.filter(function(d) { return d.parentId === parentId; }).sort(function(a, b) { return a.sort - b.sort; });
+  }
+  function getDeptById(id) {
+    return departments.find(function(d) { return d.id === id; });
+  }
+  function getDeptPath(id) {
+    var path = [];
+    var d = getDeptById(id);
+    while (d) {
+      path.unshift(d);
+      d = d.parentId ? getDeptById(d.parentId) : null;
+    }
+    return path;
+  }
+  function hasChildren(id) {
+    return departments.some(function(d) { return d.parentId === id; });
+  }
+  function countDescendants(id) {
+    var count = 0;
+    var children = getChildDepts(id);
+    children.forEach(function(c) {
+      count++;
+      count += countDescendants(c.id);
+    });
+    return count;
+  }
+
+  // ===== Render Tree =====
+  function renderTree() {
+    var container = document.getElementById('dept-tree');
+    var roots = getChildDepts(null);
+    if (treeSearchKeyword) {
+      // When searching, show flat filtered list
+      var filtered = departments.filter(function(d) {
+        return d.name.toLowerCase().indexOf(treeSearchKeyword.toLowerCase()) >= 0;
+      });
+      container.innerHTML = filtered.map(function(d) {
+        var path = getDeptPath(d.id).map(function(p) { return p.name; }).join(' / ');
+        return '<div class="tree-node">' +
+          '<div class="tree-node-row' + (currentDeptId === d.id ? ' active' : '') + '" onclick="selectDept(' + d.id + ')">' +
+            '<span class="tree-toggle"></span>' +
+            '<span class="tree-icon">📁</span>' +
+            '<span class="tree-label" title="' + path + '">' + path + '</span>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+      if (filtered.length === 0) {
+        container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);">未找到匹配的部门</div>';
+      }
+      return;
+    }
+    container.innerHTML = renderTreeNodes(roots);
+  }
+
+  function renderTreeNodes(nodes) {
+    return nodes.map(function(d) {
+      var hasKids = hasChildren(d.id);
+      var expanded = expandedNodes[d.id];
+      var childCount = countDescendants(d.id);
+      return '<div class="tree-node">' +
+        '<div class="tree-node-row' + (currentDeptId === d.id ? ' active' : '') + '" onclick="selectDept(' + d.id + ')">' +
+          (hasKids ? '<span class="tree-toggle" onclick="event.stopPropagation();toggleNode(' + d.id + ')">' + (expanded ? '▼' : '▶') + '</span>' : '<span class="tree-toggle"></span>') +
+          '<span class="tree-icon">' + (hasKids ? (expanded ? '📂' : '📁') : '📄') + '</span>' +
+          '<span class="tree-label">' + d.name + '</span>' +
+          (childCount > 0 ? '<span class="tree-count">' + childCount + '</span>' : '') +
+        '</div>' +
+        (hasKids && expanded ? '<div class="tree-children expanded">' + renderTreeNodes(getChildDepts(d.id)) + '</div>' : '') +
+      '</div>';
+    }).join('');
+  }
+
+  window.toggleNode = function(id) {
+    expandedNodes[id] = !expandedNodes[id];
+    renderTree();
+  };
+
+  window.selectDept = function(id) {
+    currentDeptId = id;
+    currentPage = 1;
+    renderTree();
+    renderBreadcrumb();
+    applyFilter();
+  };
+
+  function renderBreadcrumb() {
+    var el = document.getElementById('dept-breadcrumb');
+    if (!currentDeptId) {
+      el.innerHTML = '<span class="crumb active">全部部门</span>';
+      return;
+    }
+    var path = getDeptPath(currentDeptId);
+    var html = '<span class="crumb" onclick="selectDept(null)">全部部门</span>';
+    path.forEach(function(p, i) {
+      html += '<span class="crumb-sep">/</span>';
+      var isLast = i === path.length - 1;
+      html += '<span class="crumb' + (isLast ? ' active' : '') + '" onclick="' + (isLast ? '' : 'selectDept(' + p.id + ')') + '">' + p.name + '</span>';
+    });
+    el.innerHTML = html;
+  }
+
+  window.filterTree = function() {
+    treeSearchKeyword = document.getElementById('tree-search').value.trim();
+    renderTree();
+  };
+
+  // ===== Filter =====
+  window.searchDepts = function() { currentPage = 1; applyFilter(); };
+  window.resetFilters = function() {
+    document.getElementById('filter-name').value = '';
+    document.getElementById('filter-leader').value = '';
+    document.getElementById('filter-status').value = '';
+    currentPage = 1;
+    applyFilter();
+  };
+
+  function applyFilter() {
+    var qName = document.getElementById('filter-name').value.trim().toLowerCase();
+    var qLeader = document.getElementById('filter-leader').value.trim().toLowerCase();
+    var qStatus = document.getElementById('filter-status').value;
+    filteredDepts = departments.filter(function(d) {
+      var matchDept = !currentDeptId || d.id === currentDeptId || d.parentId === currentDeptId;
+      if (currentDeptId) {
+        // Show selected dept + its direct children
+        matchDept = d.parentId === currentDeptId || d.id === currentDeptId;
+      } else {
+        matchDept = d.parentId === null;
+      }
+      var matchName = !qName || d.name.toLowerCase().indexOf(qName) >= 0;
+      var matchLeader = !qLeader || (d.leader && d.leader.toLowerCase().indexOf(qLeader) >= 0);
+      var matchStatus = !qStatus || d.status === qStatus;
+      return matchDept && matchName && matchLeader && matchStatus;
+    });
+    renderTable();
+  }
+
+  var filteredDepts = [];
+
+  // ===== Table =====
+  function renderTable() {
+    var tbody = document.getElementById('dept-tbody');
+    var total = filteredDepts.length;
+    var totalPages = Math.max(1, Math.ceil(total / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+    var start = (currentPage - 1) * pageSize;
+    var pageData = filteredDepts.slice(start, start + pageSize);
+
+    if (pageData.length === 0) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="9">暂无数据</td></tr>';
+    } else {
+      tbody.innerHTML = pageData.map(function(d) {
+        var checked = selectedIds[d.id] ? ' checked' : '';
+        var hasKids = hasChildren(d.id);
+        var statusHtml = d.status === 'normal' ? '<span class="status-tag normal">正常</span>' : '<span class="status-tag disabled">停用</span>';
+        var toggleText = d.status === 'normal' ? '停用' : '启用';
+        var toggleClass = d.status === 'normal' ? 'warning' : '';
+        return '<tr class="' + (selectedIds[d.id] ? 'selected' : '') + '">' +
+          '<td style="text-align:center;"><span class="checkbox' + checked + '" onclick="toggleSelect(' + d.id + ')"></span></td>' +
+          '<td>' + (hasKids ? '<span style="color:var(--accent);cursor:pointer;" onclick="selectDept(' + d.id + ')">' + d.name + ' 🔍</span>' : d.name) + '</td>' +
+          '<td>' + (d.leader || '—') + '</td>' +
+          '<td>' + (d.phone || '—') + '</td>' +
+          '<td>' + (d.email || '—') + '</td>' +
+          '<td>' + d.sort + '</td>' +
+          '<td>' + statusHtml + '</td>' +
+          '<td>' + d.createTime + '</td>' +
+          '<td><div class="action-group">' +
+            '<button class="btn-text" onclick="openDrawer(\'add\',' + d.id + ')">新增子部门</button>' +
+            '<button class="btn-text" onclick="openDrawer(\'edit\',' + d.id + ')">编辑</button>' +
+            '<button class="btn-text ' + toggleClass + '" onclick="toggleStatus(' + d.id + ')">' + toggleText + '</button>' +
+            '<button class="btn-text danger" onclick="deleteDept(' + d.id + ')">删除</button>' +
+          '</div></td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    document.getElementById('page-info').textContent = '共 ' + total + ' 条';
+    document.getElementById('page-prev').className = 'page-btn' + (currentPage <= 1 ? ' disabled' : '');
+    document.getElementById('page-next').className = 'page-btn' + (currentPage >= totalPages ? ' disabled' : '');
+    var numsHtml = '';
+    for (var i = 1; i <= totalPages; i++) {
+      numsHtml += '<button class="page-btn' + (i === currentPage ? ' active' : '') + '" onclick="goToPage(' + i + ')">' + i + '</button>';
+    }
+    document.getElementById('page-numbers').innerHTML = numsHtml;
+    updateSelectAll();
+    updateBatchButton();
+  }
+
+  window.goToPage = function(p) { currentPage = p; renderTable(); };
+  window.changePage = function(d) {
+    var totalPages = Math.max(1, Math.ceil(filteredDepts.length / pageSize));
+    var np = currentPage + d;
+    if (np < 1 || np > totalPages) return;
+    currentPage = np; renderTable();
+  };
+
+  // ===== Selection =====
+  window.toggleSelect = function(id) {
+    if (selectedIds[id]) delete selectedIds[id];
+    else selectedIds[id] = true;
+    renderTable();
+  };
+  window.toggleSelectAll = function() {
+    var pageIds = filteredDepts.slice((currentPage - 1) * pageSize, currentPage * pageSize).map(function(d) { return d.id; });
+    var allSelected = pageIds.every(function(id) { return selectedIds[id]; });
+    if (allSelected) pageIds.forEach(function(id) { delete selectedIds[id]; });
+    else pageIds.forEach(function(id) { selectedIds[id] = true; });
+    renderTable();
+  };
+  function updateSelectAll() {
+    var pageIds = filteredDepts.slice((currentPage - 1) * pageSize, currentPage * pageSize).map(function(d) { return d.id; });
+    var el = document.getElementById('check-all');
+    if (pageIds.length === 0) { el.className = 'checkbox'; return; }
+    var count = pageIds.filter(function(id) { return selectedIds[id]; }).length;
+    if (count === pageIds.length) el.className = 'checkbox checked';
+    else if (count > 0) el.className = 'checkbox indeterminate';
+    else el.className = 'checkbox';
+  }
+  function updateBatchButton() {
+    var count = Object.keys(selectedIds).filter(function(k) { return selectedIds[k]; }).length;
+    var btn = document.getElementById('btn-batch-delete');
+    if (count > 0) btn.classList.remove('disabled');
+    else btn.classList.add('disabled');
+  }
+
+  // ===== Confirm =====
+  function showConfirm(text, onConfirm) {
+    var mask = document.createElement('div');
+    mask.className = 'confirm-mask';
+    mask.innerHTML = '<div class="confirm-box"><div class="confirm-text">' + text + '</div><div class="confirm-btns"><button class="btn btn-default" id="confirm-cancel">取消</button><button class="btn btn-danger" id="confirm-ok">确定</button></div></div>';
+    document.body.appendChild(mask);
+    document.getElementById('confirm-cancel').onclick = function() { document.body.removeChild(mask); };
+    document.getElementById('confirm-ok').onclick = function() { document.body.removeChild(mask); onConfirm(); };
+  }
+
+  // ===== Actions =====
+  window.toggleStatus = function(id) {
+    var d = getDeptById(id);
+    if (!d) return;
+    d.status = d.status === 'normal' ? 'disabled' : 'normal';
+    renderTree();
+    applyFilter();
+    showToast(d.status === 'normal' ? '已启用部门 ' + d.name : '已停用部门 ' + d.name, 'success');
+  };
+
+  window.deleteDept = function(id) {
+    var d = getDeptById(id);
+    if (!d) return;
+    var childCount = countDescendants(id);
+    var msg = childCount > 0
+      ? '部门「' + d.name + '」下有 ' + childCount + ' 个子部门，删除后子部门将一并删除。确定删除吗？'
+      : '确定删除部门「' + d.name + '」吗？';
+    showConfirm(msg, function() {
+      deleteDeptRecursive(id);
+      renderTree();
+      applyFilter();
+      renderBreadcrumb();
+      showToast('已删除部门 ' + d.name, 'success');
+    });
+  };
+
+  function deleteDeptRecursive(id) {
+    var children = getChildDepts(id);
+    children.forEach(function(c) { deleteDeptRecursive(c.id); });
+    departments = departments.filter(function(d) { return d.id !== id; });
+    delete selectedIds[id];
+  }
+
+  window.batchDelete = function() {
+    var ids = Object.keys(selectedIds).filter(function(k) { return selectedIds[k]; }).map(Number);
+    if (ids.length === 0) { showToast('请先选择要删除的部门', 'warning'); return; }
+    showConfirm('确定删除选中的 ' + ids.length + ' 个部门吗？子部门将一并删除。', function() {
+      ids.forEach(function(id) { deleteDeptRecursive(id); });
+      selectedIds = {};
+      renderTree();
+      applyFilter();
+      renderBreadcrumb();
+      showToast('已删除 ' + ids.length + ' 个部门', 'success');
+    });
+  };
+
+  // ===== Drawer =====
+  window.openDrawer = function(mode, parentId) {
+    drawerMode = mode || 'add';
+    editDeptId = null;
+    var d = null;
+    var pName = '';
+
+    if (drawerMode === 'edit') {
+      // Find dept from filter context
+      // Use the table selection
+    }
+
+    document.getElementById('drawer-title').textContent = drawerMode === 'edit' ? '编辑部门' : (parentId ? '新增子部门' : '新增部门');
+    document.getElementById('drawer-body').innerHTML = getFormHTML(null, parentId);
+    document.getElementById('drawer-footer').innerHTML =
+      '<button class="btn btn-default" onclick="closeDrawer()">取消</button>' +
+      '<button class="btn btn-primary" onclick="saveDept()">确定</button>';
+    document.getElementById('drawer-overlay').classList.add('show');
+    document.getElementById('drawer').classList.add('show');
+  };
+
+  // Override openDrawer for edit mode
+  window.openDrawer = function(mode, targetId) {
+    drawerMode = mode || 'add';
+    editDeptId = null;
+    var d = null;
+    var parentId = null;
+
+    if (mode === 'edit' && targetId) {
+      d = getDeptById(targetId);
+      if (!d) return;
+      editDeptId = targetId;
+      parentId = d.parentId;
+    } else if (mode === 'add') {
+      parentId = targetId;
+    }
+
+    document.getElementById('drawer-title').textContent = mode === 'edit' ? '编辑部门' : '新增部门';
+    document.getElementById('drawer-body').innerHTML = getFormHTML(d, parentId);
+    document.getElementById('drawer-footer').innerHTML =
+      '<button class="btn btn-default" onclick="closeDrawer()">取消</button>' +
+      '<button class="btn btn-primary" onclick="saveDept()">确定</button>';
+    document.getElementById('drawer-overlay').classList.add('show');
+    document.getElementById('drawer').classList.add('show');
+  };
+
+  window.closeDrawer = function() {
+    document.getElementById('drawer-overlay').classList.remove('show');
+    document.getElementById('drawer').classList.remove('show');
+  };
+
+  function getFormHTML(d, parentId) {
+    var name = d ? d.name : '';
+    var leader = d ? d.leader : '';
+    var phone = d ? d.phone : '';
+    var email = d ? d.email : '';
+    var sort = d ? d.sort : '';
+    var status = d ? d.status : 'normal';
+    var pId = d ? d.parentId : parentId;
+
+    // Build parent dept options as tree
+    var parentTreeHtml = '';
+    if (pId === null) {
+      parentTreeHtml = '<div class="form-hint" style="margin-top:0;">顶级部门</div>';
+    } else {
+      var parent = getDeptById(pId);
+      parentTreeHtml = '<div class="tree-select" style="pointer-events:none;background:var(--bg3);">' +
+        '<div class="tree-node-row" style="cursor:default;"><span class="tree-icon">📁</span><span class="tree-label">' + (parent ? parent.name : '—') + '</span></div>' +
+      '</div>';
+    }
+
+    return (
+      '<div class="form-item">' +
+        '<div class="form-item-label"><span class="form-item-label-text">上级部门</span></div>' +
+        parentTreeHtml +
+      '</div>' +
+      '<div class="form-item">' +
+        '<div class="form-item-label"><span class="required-mark">*</span><span class="form-item-label-text">部门名称</span></div>' +
+        '<input class="form-input" id="f-name" value="' + name + '" placeholder="请输入部门名称" maxlength="30">' +
+      '</div>' +
+      '<div class="form-row">' +
+        '<div class="form-item">' +
+          '<div class="form-item-label"><span class="form-item-label-text">负责人</span></div>' +
+          '<input class="form-input" id="f-leader" value="' + leader + '" placeholder="请输入负责人" maxlength="20">' +
+        '</div>' +
+        '<div class="form-item">' +
+          '<div class="form-item-label"><span class="form-item-label-text">联系电话</span></div>' +
+          '<input class="form-input" id="f-phone" value="' + phone + '" placeholder="请输入联系电话" maxlength="20">' +
+        '</div>' +
+      '</div>' +
+      '<div class="form-item">' +
+        '<div class="form-item-label"><span class="form-item-label-text">邮箱</span></div>' +
+        '<input class="form-input" id="f-email" value="' + email + '" placeholder="请输入邮箱">' +
+      '</div>' +
+      '<div class="form-row">' +
+        '<div class="form-item">' +
+          '<div class="form-item-label"><span class="form-item-label-text">排序</span></div>' +
+          '<input class="form-input" id="f-sort" type="number" value="' + sort + '" placeholder="数字越小越靠前" min="0">' +
+        '</div>' +
+        '<div class="form-item">' +
+          '<div class="form-item-label"><span class="form-item-label-text">状态</span></div>' +
+          '<select class="form-select" id="f-status">' +
+            '<option value="normal"' + (status === 'normal' ? ' selected' : '') + '>正常</option>' +
+            '<option value="disabled"' + (status === 'disabled' ? ' selected' : '') + '>停用</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  window.saveDept = function() {
+    var name = document.getElementById('f-name').value.trim();
+    var leader = document.getElementById('f-leader').value.trim();
+    var phone = document.getElementById('f-phone').value.trim();
+    var email = document.getElementById('f-email').value.trim();
+    var sort = parseInt(document.getElementById('f-sort').value) || 0;
+    var status = document.getElementById('f-status').value;
+
+    if (!name) { showToast('请输入部门名称', 'warning'); return; }
+
+    // Determine parentId from context
+    var parentId = null;
+    if (drawerMode === 'edit' && editDeptId) {
+      var d = getDeptById(editDeptId);
+      if (d) parentId = d.parentId;
+    } else {
+      // Add mode - parentId was set when opening drawer
+      parentId = editDeptId || currentDeptId || null;
+      // editDeptId is not set for add, use the stored value
+    }
+
+    if (drawerMode === 'add') {
+      // Get parentId from the drawer opening context
+      parentId = window._addParentId || null;
+      var newId = Math.max(0, Math.max.apply(null, departments.map(function(d) { return d.id; }))) + 1;
+      var now = new Date();
+      var nowStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0') + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ':' + String(now.getSeconds()).padStart(2, '0');
+      departments.push({ id: newId, name: name, parentId: parentId, leader: leader, phone: phone, email: email, sort: sort, status: status, createTime: nowStr });
+      showToast('已新增部门 ' + name, 'success');
+    } else if (drawerMode === 'edit' && editDeptId) {
+      var d2 = getDeptById(editDeptId);
+      if (d2) {
+        d2.name = name; d2.leader = leader; d2.phone = phone; d2.email = email; d2.sort = sort; d2.status = status;
+      }
+      showToast('已更新部门 ' + name, 'success');
+    }
+
+    closeDrawer();
+    renderTree();
+    applyFilter();
+    renderBreadcrumb();
+  };
+
+  // Fix: store parentId when opening add drawer
+  var originalOpenDrawer = window.openDrawer;
+  window.openDrawer = function(mode, targetId) {
+    drawerMode = mode || 'add';
+    editDeptId = null;
+    window._addParentId = null;
+    var d = null;
+
+    if (mode === 'edit' && targetId) {
+      d = getDeptById(targetId);
+      if (!d) return;
+      editDeptId = targetId;
+    } else if (mode === 'add') {
+      window._addParentId = targetId || null;
+    }
+
+    document.getElementById('drawer-title').textContent = mode === 'edit' ? '编辑部门' : '新增部门';
+    document.getElementById('drawer-body').innerHTML = getFormHTML(d, targetId);
+    document.getElementById('drawer-footer').innerHTML =
+      '<button class="btn btn-default" onclick="closeDrawer()">取消</button>' +
+      '<button class="btn btn-primary" onclick="saveDept()">确定</button>';
+    document.getElementById('drawer-overlay').classList.add('show');
+    document.getElementById('drawer').classList.add('show');
+  };
+
+  // ===== Init =====
+  // Expand root by default
+  expandedNodes[1] = true;
+  renderTree();
+  renderBreadcrumb();
+  applyFilter();
+</script>
+
+
+</body></html>

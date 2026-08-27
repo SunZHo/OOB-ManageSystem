@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>菜单管理 - 带外管理系统</title>
+<style>
+  :root {
+    --bg: #f0f2f5;
+    --bg2: #ffffff;
+    --bg3: #fafafa;
+    --ink: #303133;
+    --ink2: #606266;
+    --muted: #909399;
+    --muted2: #c0c4cc;
+    --muted3: #dcdfe6;
+    --rule: #dcdfe6;
+    --rule2: #ebeef5;
+    --accent: #409eff;
+    --accent-hover: #66b1ff;
+    --accent-active: #3a8ee6;
+    --accent-bg: #ecf5ff;
+    --accent-light: #e6f7ff;
+    --danger: #f56c6c;
+    --danger-hover: #f78989;
+    --danger-bg: #fef0f0;
+    --success: #67c23a;
+    --success-bg: #f0f9eb;
+    --warning: #e6a23c;
+    --warning-bg: #fdf6ec;
+    --header-bg: #fafafa;
+    --radius: 4px;
+    --radius-sm: 4px;
+    --shadow: 0 2px 12px 0 rgba(0,0,0,0.06);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+    background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.5; overflow: hidden;
+  }
+
+  .main-content { height: 100vh; display: flex; flex-direction: column; padding: 16px 24px; }
+  .page-card { background: var(--bg2); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+  .filter-bar { display: flex; align-items: flex-start; gap: 12px; padding: 16px 20px; flex-wrap: wrap; flex-shrink: 0; border-bottom: 1px solid var(--rule2); }
+  .filter-group { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .filter-item { display: flex; align-items: center; gap: 8px; }
+  .filter-label { font-size: 14px; color: var(--ink2); white-space: nowrap; }
+  .filter-input { width: 180px; height: 32px; border: 1px solid var(--rule); border-radius: var(--radius); padding: 0 12px; font-size: 14px; color: var(--ink); background: var(--bg2); outline: none; transition: border-color 0.2s; font-family: inherit; }
+  .filter-input:focus { border-color: var(--accent); }
+  .filter-input::placeholder { color: var(--muted2); }
+  .filter-select { width: 160px; height: 32px; border: 1px solid var(--rule); border-radius: var(--radius); padding: 0 32px 0 12px; font-size: 14px; color: var(--ink); background: var(--bg2); outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23909399' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; transition: border-color 0.2s; }
+  .filter-select:focus { border-color: var(--accent); }
+  .filter-buttons { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+  .filter-left-btns { display: flex; align-items: center; gap: 8px; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 32px; padding: 0 16px; border: 1px solid var(--rule); border-radius: var(--radius); font-size: 14px; cursor: pointer; transition: all 0.2s; background: var(--bg2); color: var(--ink); font-family: inherit; white-space: nowrap; }
+  .btn:hover { color: var(--accent); border-color: var(--accent); }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
+  .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .btn-danger:hover { background: var(--danger-hover); border-color: var(--danger-hover); color: #fff; }
+  .btn-default { background: var(--bg2); }
+  .btn.disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+
+  /* Tree table */
+  .table-wrap { flex: 1; overflow: auto; min-height: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead th { background: var(--header-bg); color: var(--ink2); font-weight: 500; text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--rule2); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+  tbody td { padding: 12px 16px; border-bottom: 1px solid var(--rule2); color: var(--ink); }
+  tbody tr:hover { background: var(--bg3); }
+  tbody tr.row-expanded { background: var(--bg3); }
+  .empty-row td { text-align: center; padding: 60px 0; color: var(--muted); }
+
+  /* Tree indent */
+  .tree-indent { display: inline-block; width: 20px; }
+  .tree-toggle { display: inline-block; width: 16px; text-align: center; cursor: pointer; color: var(--muted); font-size: 12px; user-select: none; }
+  .tree-label { display: inline-flex; align-items: center; gap: 6px; }
+  .tree-icon { font-size: 14px; }
+
+  /* Type tag */
+  .type-tag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: var(--radius); font-size: 12px; line-height: 1.5; }
+  .type-tag.directory { color: var(--accent); background: var(--accent-bg); }
+  .type-tag.menu { color: var(--success); background: var(--success-bg); }
+  .type-tag.button { color: var(--warning); background: var(--warning-bg); }
+
+  /* Status tag */
+  .status-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--radius); font-size: 12px; line-height: 1.5; }
+  .status-tag.normal { color: var(--success); background: var(--success-bg); }
+  .status-tag.hidden { color: var(--muted); background: var(--bg3); }
+  .status-tag::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .btn-text { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 14px; padding: 0; transition: color 0.2s; font-family: inherit; }
+  .btn-text:hover { color: var(--accent-hover); }
+  .btn-text.danger { color: var(--danger); }
+  .btn-text.danger:hover { color: var(--danger-hover); }
+  .action-group { display: flex; gap: 12px; }
+
+  .perm-code { font-family: 'SF Mono', 'Monaco', 'Consolas', monospace; font-size: 13px; color: var(--ink2); }
+
+  /* Drawer */
+  .drawer-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s; }
+  .drawer-overlay.show { opacity: 1; visibility: visible; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 560px; background: var(--bg2); z-index: 1001; transform: translateX(100%); transition: transform 0.3s; display: flex; flex-direction: column; box-shadow: -4px 0 16px rgba(0,0,0,0.08); }
+  .drawer.show { transform: translateX(0); }
+  .drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid var(--rule2); flex-shrink: 0; }
+  .drawer-title { font-size: 16px; font-weight: 500; color: var(--ink); }
+  .drawer-close { background: none; border: none; font-size: 20px; color: var(--muted); cursor: pointer; padding: 0; line-height: 1; transition: color 0.2s; }
+  .drawer-close:hover { color: var(--ink); }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 24px; }
+  .drawer-footer { padding: 12px 24px; border-top: 1px solid var(--rule2); display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+
+  /* Form */
+  .form-item { margin-bottom: 22px; }
+  .form-item:last-child { margin-bottom: 0; }
+  .form-item-label { display: flex; align-items: center; gap: 2px; margin-bottom: 8px; }
+  .required-mark { color: var(--danger); font-size: 14px; margin-right: 2px; line-height: 1; }
+  .form-item-label-text { font-size: 14px; color: var(--ink); }
+  .form-input { width: 100%; height: 34px; border: 1px solid var(--rule); border-radius: var(--radius-sm); padding: 0 12px; font-size: 14px; color: var(--ink); background: var(--bg2); outline: none; transition: all 0.2s; font-family: inherit; }
+  .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(64,158,255,0.08); }
+  .form-input:disabled { background: var(--bg3); color: var(--muted); cursor: not-allowed; }
+  .form-select { width: 100%; height: 34px; border: 1px solid var(--rule); border-radius: var(--radius-sm); padding: 0 32px 0 12px; font-size: 14px; color: var(--ink); background: var(--bg2); outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23909399' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+  .form-select:focus { border-color: var(--accent); }
+  .form-textarea { width: 100%; min-height: 80px; border: 1px solid var(--rule); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 14px; color: var(--ink); background: var(--bg2); outline: none; transition: all 0.2s; font-family: inherit; resize: vertical; }
+  .form-textarea:focus { border-color: var(--accent); }
+  .form-hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .form-row { display: flex; gap: 16px; }
+  .form-row .form-item { flex: 1; }
+
+  /* Radio group for menu type */
+  .radio-group { display: flex; gap: 24px; }
+  .radio-item { display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 8px 16px; border: 1px solid var(--rule2); border-radius: var(--radius); transition: all 0.2s; }
+  .radio-item:hover { border-color: var(--accent); }
+  .radio-item.selected { border-color: var(--accent); background: var(--accent-bg); }
+  .radio-dot { width: 14px; height: 14px; border: 2px solid var(--muted2); border-radius: 50%; transition: all 0.2s; position: relative; }
+  .radio-item.selected .radio-dot { border-color: var(--accent); }
+  .radio-item.selected .radio-dot::after { content: ''; position: absolute; left: 2px; top: 2px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .radio-label { font-size: 14px; color: var(--ink); }
+
+  /* Tree select */
+  .tree-select-wrap { position: relative; }
+  .tree-select-display { width: 100%; height: 34px; border: 1px solid var(--rule); border-radius: var(--radius-sm); padding: 0 32px 0 12px; font-size: 14px; color: var(--ink); background: var(--bg2); outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23909399' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; line-height: 34px; }
+  .tree-select-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg2); border: 1px solid var(--rule); border-radius: var(--radius-sm); max-height: 240px; overflow-y: auto; z-index: 10; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .tree-select-dropdown.show { display: block; }
+  .tree-select-node { padding: 4px 12px; cursor: pointer; font-size: 14px; transition: background 0.2s; }
+  .tree-select-node:hover { background: var(--bg3); }
+  .tree-select-node.selected { background: var(--accent-bg); color: var(--accent); }
+
+  /* Icon picker */
+  .icon-picker { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; border: 1px solid var(--rule2); border-radius: var(--radius-sm); max-height: 120px; overflow-y: auto; }
+  .icon-option { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--rule2); border-radius: var(--radius); cursor: pointer; font-size: 18px; transition: all 0.2s; }
+  .icon-option:hover { border-color: var(--accent); background: var(--accent-bg); }
+  .icon-option.selected { border-color: var(--accent); background: var(--accent-bg); }
+
+  /* Toast */
+  .toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--ink); color: #fff; padding: 8px 24px; border-radius: var(--radius); font-size: 14px; z-index: 9999; transition: transform 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--success); }
+  .toast.error { background: var(--danger); }
+  .toast.warning { background: var(--warning); }
+
+  .confirm-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+  .confirm-box { background: var(--bg2); border-radius: 8px; padding: 24px 28px; min-width: 360px; box-shadow: 0 4px 24px rgba(0,0,0,0.15); }
+  .confirm-text { font-size: 15px; color: var(--ink); margin-bottom: 20px; }
+  .confirm-btns { display: flex; gap: 12px; justify-content: flex-end; }
+
+  @media (max-width: 1100px) {
+    .filter-bar { flex-direction: column; align-items: stretch; }
+    .filter-buttons { margin-left: 0; }
+    .drawer { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="main-content">
+  <div class="page-card">
+    <div class="filter-bar">
+      <div class="filter-group">
+        <div class="filter-item">
+          <span class="filter-label">菜单名称</span>
+          <input class="filter-input" id="filter-name" placeholder="请输入菜单名称">
+        </div>
+        <div class="filter-item">
+          <span class="filter-label">菜单类型</span>
+          <select class="filter-select" id="filter-type">
+            <option value="">全部</option>
+            <option value="directory">目录</option>
+            <option value="menu">菜单</option>
+            <option value="button">按钮</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <span class="filter-label">状态</span>
+          <select class="filter-select" id="filter-status">
+            <option value="">全部</option>
+            <option value="normal">显示</option>
+            <option value="hidden">隐藏</option>
+          </select>
+        </div>
+        <div class="filter-left-btns">
+          <button class="btn btn-primary" onclick="searchMenus()">查询</button>
+          <button class="btn btn-default" onclick="resetFilters()">重置</button>
+        </div>
+      </div>
+      <div class="filter-buttons">
+        <button class="btn btn-primary" onclick="openDrawer('add', null)">新增菜单</button>
+        <button class="btn btn-default" onclick="expandAll()">展开全部</button>
+        <button class="btn btn-default" onclick="collapseAll()">折叠全部</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="min-width:240px;">菜单名称</th>
+            <th style="width:80px;">类型</th>
+            <th style="width:120px;">图标</th>
+            <th style="width:160px;">路由地址</th>
+            <th style="width:160px;">权限标识</th>
+            <th style="width:80px;">排序</th>
+            <th style="width:80px;">状态</th>
+            <th style="width:200px;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="menu-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Drawer -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <span class="drawer-title" id="drawer-title">新增菜单</span>
+    <button class="drawer-close" onclick="closeDrawer()">×</button>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+  <div class="drawer-footer" id="drawer-footer"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ===== Mock Data =====
+  var iconList = ['📊', '🖥️', '📡', '⚙️', '🔐', '📋', '📁', '📄', '🔑', '📌', '🔔', '👁️', '🛡️', '📈', '🔌', '💻'];
+
+  var menus = [
+    { id: 1, name: '设备发现', type: 'menu', icon: '📡', path: '/discovery', perm: 'discovery', sort: 1, status: 'normal', parentId: null, component: 'device-discovery', remark: '设备发现管理页面', children: [
+      { id: 11, name: '发现规则', type: 'menu', icon: '📋', path: 'rule', perm: 'discovery:rule', sort: 1, status: 'normal', parentId: 1, component: 'discovery-rule', remark: 'IP扫描规则管理', children: [] },
+      { id: 12, name: '设备列表', type: 'menu', icon: '📄', path: 'device', perm: 'discovery:device', sort: 2, status: 'normal', parentId: 1, component: 'discovery-device', remark: '已发现设备列表', children: [] }
+    ]},
+    { id: 2, name: '监控设备', type: 'menu', icon: '📊', path: '/monitor', perm: 'monitor', sort: 2, status: 'normal', parentId: null, component: 'monitor-device-list', remark: '监控设备管理', children: [
+      { id: 21, name: '设备列表', type: 'menu', icon: '📄', path: 'list', perm: 'monitor:list', sort: 1, status: 'normal', parentId: 2, component: 'monitor-list', remark: '监控设备列表', children: [] },
+      { id: 22, name: '启动监测', type: 'button', icon: '', path: '', perm: 'monitor:start', sort: 2, status: 'normal', parentId: 2, component: '', remark: '启动设备监测', children: [] },
+      { id: 23, name: '暂停监测', type: 'button', icon: '', path: '', perm: 'monitor:pause', sort: 3, status: 'normal', parentId: 2, component: '', remark: '暂停设备监测', children: [] }
+    ]},
+    { id: 3, name: '模板管理', type: 'menu', icon: '📋', path: '/template', perm: 'template', sort: 3, status: 'normal', parentId: null, component: 'template-gallery', remark: '采集模板管理', children: [
+      { id: 31, name: '新增模板', type: 'button', icon: '', path: '', perm: 'template:add', sort: 1, status: 'normal', parentId: 3, component: '', remark: '新增采集模板', children: [] },
+      { id: 32, name: '编辑模板', type: 'button', icon: '', path: '', perm: 'template:edit', sort: 2, status: 'normal', parentId: 3, component: '', remark: '编辑采集模板', children: [] },
+      { id: 33, name: '删除模板', type: 'button', icon: '', path: '', perm: 'template:del', sort: 3, status: 'normal', parentId: 3, component: '', remark: '删除采集模板', children: [] }
+    ]},
+    { id: 4, name: '凭证管理', type: 'menu', icon: '🔑', path: '/credential', perm: 'credential', sort: 4, status: 'normal', parentId: null, component: 'credential-list', remark: 'SNMP/SSH凭证管理', children: [
+      { id: 41, name: '新增凭证', type: 'button', icon: '', path: '', perm: 'credential:add', sort: 1, status: 'normal', parentId: 4, component: '', remark: '新增凭证', children: [] },
+      { id: 42, name: '编辑凭证', type: 'button', icon: '', path: '', perm: 'credential:edit', sort: 2, status: 'normal', parentId: 4, component: '', remark: '编辑凭证', children: [] },
+      { id: 43, name: '删除凭证', type: 'button', icon: '', path: '', perm: 'credential:del', sort: 3, status: 'normal', parentId: 4, component: '', remark: '删除凭证', children: [] }
+    ]},
+    { id: 5, name: '系统管理', type: 'directory', icon: '⚙️', path: '/system', perm: 'system', sort: 5, status: 'normal', parentId: null, component: '', remark: '系统管理目录', children: [
+      { id: 51, name: '用户管理', type: 'menu', icon: '👥', path: 'user', perm: 'system:user', sort: 1, status: 'normal', parentId: 5, component: 'user-management', remark: '系统用户管理', children: [
+        { id: 511, name: '新增用户', type: 'button', icon: '', path: '', perm: 'user:add', sort: 1, status: 'normal', parentId: 51, component: '', remark: '新增用户', children: [] },
+        { id: 512, name: '编辑用户', type: 'button', icon: '', path: '', perm: 'user:edit', sort: 2, status: 'normal', parentId: 51, component: '', remark: '编辑用户', children: [] },
+        { id: 513, name: '删除用户', type: 'button', icon: '', path: '', perm: 'user:del', sort: 3, status: 'normal', parentId: 51, component: '', remark: '删除用户', children: [] },
+        { id: 514, name: '重置密码', type: 'button', icon: '', path: '', perm: 'user:reset', sort: 4, status: 'normal', parentId: 51, component: '', remark: '重置用户密码', children: [] }
+      ]},
+      { id: 52, name: '角色管理', type: 'menu', icon: '🎭', path: 'role', perm: 'system:role', sort: 2, status: 'normal', parentId: 5, component: 'role-management', remark: '角色权限管理', children: [
+        { id: 521, name: '新增角色', type: 'button', icon: '', path: '', perm: 'role:add', sort: 1, status: 'normal', parentId: 52, component: '', remark: '新增角色', children: [] },
+        { id: 522, name: '编辑角色', type: 'button', icon: '', path: '', perm: 'role:edit', sort: 2, status: 'normal', parentId: 52, component: '', remark: '编辑角色', children: [] },
+        { id: 523, name: '删除角色', type: 'button', icon: '', path: '', perm: 'role:del', sort: 3, status: 'normal', parentId: 52, component: '', remark: '删除角色', children: [] },
+        { id: 524, name: '权限分配', type: 'button', icon: '', path: '', perm: 'role:perm', sort: 4, status: 'normal', parentId: 52, component: '', remark: '分配角色权限', children: [] }
+      ]},
+      { id: 53, name: '部门管理', type: 'menu', icon: '🏢', path: 'dept', perm: 'system:dept', sort: 3, status: 'normal', parentId: 5, component: 'dept-management', remark: '组织部门管理', children: [
+        { id: 531, name: '新增部门', type: 'button', icon: '', path: '', perm: 'dept:add', sort: 1, status: 'normal', parentId: 53, component: '', remark: '新增部门', children: [] },
+        { id: 532, name: '编辑部门', type: 'button', icon: '', path: '', perm: 'dept:edit', sort: 2, status: 'normal', parentId: 53, component: '', remark: '编辑部门', children: [] },
+        { id: 533, name: '删除部门', type: 'button', icon: '', path: '', perm: 'dept:del', sort: 3, status: 'normal', parentId: 53, component: '', remark: '删除部门', children: [] }
+      ]},
+      { id: 54, name: '菜单管理', type: 'menu', icon: '📝', path: 'menu', perm: 'system:menu', sort: 4, status: 'normal', parentId: 5, component: 'menu-management', remark: '系统菜单管理', children: [
+        { id: 541, name: '新增菜单', type: 'button', icon: '', path: '', perm: 'menu:add', sort: 1, status: 'normal', parentId: 54, component: '', remark: '新增菜单', children: [] },
+        { id: 542, name: '编辑菜单', type: 'button', icon: '', path: '', perm: 'menu:edit', sort: 2, status: 'normal', parentId: 54, component: '', remark: '编辑菜单', children: [] },
+        { id: 543, name: '删除菜单', type: 'button', icon: '', path: '', perm: 'menu:del', sort: 3, status: 'normal', parentId: 54, component: '', remark: '删除菜单', children: [] }
+      ]},
+      { id: 55, name: '字典管理', type: 'menu', icon: '📚', path: 'dict', perm: 'system:dict', sort: 5, status: 'normal', parentId: 5, component: 'dict-management', remark: '数据字典管理', children: [
+        { id: 551, name: '新增字典', type: 'button', icon: '', path: '', perm: 'dict:add', sort: 1, status: 'normal', parentId: 55, component: '', remark: '新增字典', children: [] },
+        { id: 552, name: '编辑字典', type: 'button', icon: '', path: '', perm: 'dict:edit', sort: 2, status: 'normal', parentId: 55, component: '', remark: '编辑字典', children: [] },
+        { id: 553, name: '删除字典', type: 'button', icon: '', path: '', perm: 'dict:del', sort: 3, status: 'normal', parentId: 55, component: '', remark: '删除字典', children: [] }
+      ]}
+    ]}
+  ];
+
+  // Flat index for quick lookup
+  var menuMap = {};
+  function buildMenuMap(list) {
+    list.forEach(function(m) {
+      menuMap[m.id] = m;
+      if (m.children) buildMenuMap(m.children);
+    });
+  }
+
+  var expandedNodes = {};
+  var drawerMode = 'add';
+  var editMenuId = null;
+  var tempType = 'menu';
+  var tempIcon = '';
+  var tempParentId = null;
+
+  // ===== Toast =====
+  var toastTimer;
+  function showToast(msg, type) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() { el.className = 'toast'; }, 3000);
+  }
+
+  // ===== Filter =====
+  window.searchMenus = function() { renderTable(); };
+  window.resetFilters = function() {
+    document.getElementById('filter-name').value = '';
+    document.getElementById('filter-type').value = '';
+    document.getElementById('filter-status').value = '';
+    renderTable();
+  };
+
+  // ===== Helpers =====
+  function flattenMenus(list, level, result) {
+    var qName = document.getElementById('filter-name').value.trim().toLowerCase();
+    var qType = document.getElementById('filter-type').value;
+    var qStatus = document.getElementById('filter-status').value;
+
+    list.sort(function(a, b) { return a.sort - b.sort; }).forEach(function(m) {
+      var matchName = !qName || m.name.toLowerCase().indexOf(qName) >= 0;
+      var matchType = !qType || m.type === qType;
+      var matchStatus = !qStatus || m.status === qStatus;
+      var hasMatchingChild = false;
+
+      if (m.children && m.children.length > 0) {
+        // Check if any descendant matches
+        function checkDescendants(nodes) {
+          return nodes.some(function(n) {
+            if (!qName || n.name.toLowerCase().indexOf(qName) >= 0) {
+              if (!qType || n.type === qType) {
+                if (!qStatus || n.status === qStatus) return true;
+              }
+            }
+            return n.children && n.children.length > 0 ? checkDescendants(n.children) : false;
+          });
+        }
+        hasMatchingChild = checkDescendants(m.children);
+      }
+
+      if (matchName && matchType && matchStatus || hasMatchingChild) {
+        result.push({ menu: m, level: level });
+        if (m.children && m.children.length > 0 && (expandedNodes[m.id] || qName)) {
+          flattenMenus(m.children, level + 1, result);
+        }
+      }
+    });
+  }
+
+  function getTypeLabel(type) {
+    if (type === 'directory') return '目录';
+    if (type === 'menu') return '菜单';
+    return '按钮';
+  }
+
+  // ===== Render Table =====
+  function renderTable() {
+    buildMenuMap(menus);
+    var tbody = document.getElementById('menu-tbody');
+    var flat = [];
+    flattenMenus(menus, 0, flat);
+
+    if (flat.length === 0) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">暂无数据</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = flat.map(function(item) {
+      var m = item.menu;
+      var level = item.level;
+      var hasChildren = m.children && m.children.length > 0;
+      var isExpanded = expandedNodes[m.id];
+      var qName = document.getElementById('filter-name').value.trim();
+      var showToggle = hasChildren || (qName && m.children);
+
+      var indent = '';
+      for (var i = 0; i < level; i++) indent += '<span class="tree-indent"></span>';
+
+      var toggleHtml = showToggle
+        ? '<span class="tree-toggle" onclick="toggleNode(' + m.id + ')">' + (isExpanded || qName ? '▼' : '▶') + '</span>'
+        : '<span class="tree-indent"></span>';
+
+      var iconHtml = m.icon ? '<span class="tree-icon">' + m.icon + '</span>' : '<span class="tree-icon" style="color:var(--muted2);">—</span>';
+      var statusHtml = m.status === 'normal' ? '<span class="status-tag normal">显示</span>' : '<span class="status-tag hidden">隐藏</span>';
+      var pathHtml = m.path ? '<span class="perm-code">' + m.path + '</span>' : '<span style="color:var(--muted2);">—</span>';
+      var permHtml = m.perm ? '<span class="perm-code">' + m.perm + '</span>' : '<span style="color:var(--muted2);">—</span>';
+      var iconColHtml = m.icon ? '<span style="font-size:16px;">' + m.icon + '</span>' : '<span style="color:var(--muted2);">—</span>';
+
+      return '<tr>' +
+        '<td>' + indent + toggleHtml + '<span class="tree-label">' + iconHtml + m.name + '</span></td>' +
+        '<td><span class="type-tag ' + m.type + '">' + getTypeLabel(m.type) + '</span></td>' +
+        '<td>' + iconColHtml + '</td>' +
+        '<td>' + pathHtml + '</td>' +
+        '<td>' + permHtml + '</td>' +
+        '<td>' + m.sort + '</td>' +
+        '<td>' + statusHtml + '</td>' +
+        '<td><div class="action-group">' +
+          '<button class="btn-text" onclick="openDrawer(\'add\',' + m.id + ')">新增子项</button>' +
+          '<button class="btn-text" onclick="openDrawer(\'edit\',' + m.id + ')">编辑</button>' +
+          '<button class="btn-text danger" onclick="deleteMenu(' + m.id + ')">删除</button>' +
+        '</div></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  window.toggleNode = function(id) {
+    expandedNodes[id] = !expandedNodes[id];
+    renderTable();
+  };
+
+  window.expandAll = function() {
+    function walk(list) {
+      list.forEach(function(m) {
+        if (m.children && m.children.length > 0) {
+          expandedNodes[m.id] = true;
+          walk(m.children);
+        }
+      });
+    }
+    walk(menus);
+    renderTable();
+  };
+
+  window.collapseAll = function() {
+    expandedNodes = {};
+    renderTable();
+  };
+
+  // ===== Confirm =====
+  function showConfirm(text, onConfirm) {
+    var mask = document.createElement('div');
+    mask.className = 'confirm-mask';
+    mask.innerHTML = '<div class="confirm-box"><div class="confirm-text">' + text + '</div><div class="confirm-btns"><button class="btn btn-default" id="confirm-cancel">取消</button><button class="btn btn-danger" id="confirm-ok">确定</button></div></div>';
+    document.body.appendChild(mask);
+    document.getElementById('confirm-cancel').onclick = function() { document.body.removeChild(mask); };
+    document.getElementById('confirm-ok').onclick = function() { document.body.removeChild(mask); onConfirm(); };
+  }
+
+  // ===== Delete =====
+  window.deleteMenu = function(id) {
+    var m = menuMap[id];
+    if (!m) return;
+    var childCount = m.children ? m.children.length : 0;
+    var msg = childCount > 0
+      ? '菜单「' + m.name + '」下有 ' + childCount + ' 个子项，删除后子项将一并删除。确定删除吗？'
+      : '确定删除菜单「' + m.name + '」吗？';
+    showConfirm(msg, function() {
+      deleteMenuFromTree(menus, id);
+      buildMenuMap(menus);
+      renderTable();
+      showToast('已删除菜单 ' + m.name, 'success');
+    });
+  };
+
+  function deleteMenuFromTree(list, id) {
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === id) {
+        list.splice(i, 1);
+        return true;
+      }
+      if (list[i].children && list[i].children.length > 0) {
+        if (deleteMenuFromTree(list[i].children, id)) return true;
+      }
+    }
+    return false;
+  }
+
+  // ===== Drawer =====
+  window.openDrawer = function(mode, targetId) {
+    drawerMode = mode || 'add';
+    editMenuId = null;
+    var m = null;
+    tempParentId = null;
+    tempType = 'menu';
+    tempIcon = '';
+
+    if (mode === 'edit' && targetId) {
+      m = menuMap[targetId];
+      if (!m) return;
+      editMenuId = targetId;
+      tempType = m.type;
+      tempIcon = m.icon || '';
+      tempParentId = m.parentId;
+    } else if (mode === 'add') {
+      tempParentId = targetId || null;
+    }
+
+    document.getElementById('drawer-title').textContent = mode === 'edit' ? '编辑菜单' : '新增菜单';
+    document.getElementById('drawer-body').innerHTML = getFormHTML(m);
+    document.getElementById('drawer-footer').innerHTML =
+      '<button class="btn btn-default" onclick="closeDrawer()">取消</button>' +
+      '<button class="btn btn-primary" onclick="saveMenu()">确定</button>';
+    document.getElementById('drawer-overlay').classList.add('show');
+    document.getElementById('drawer').classList.add('show');
+  };
+
+  window.closeDrawer = function() {
+    document.getElementById('drawer-overlay').classList.remove('show');
+    document.getElementById('drawer').classList.remove('show');
+  };
+
+  function getFormHTML(m) {
+    var name = m ? m.name : '';
+    var path = m ? m.path : '';
+    var perm = m ? m.perm : '';
+    var sort = m ? m.sort : '';
+    var status = m ? m.status : 'normal';
+    var component = m ? m.component : '';
+    var remark = m ? m.remark : '';
+    var isEdit = m ? true : false;
+
+    // Parent dept display
+    var parentDisplay = '顶级菜单';
+    if (tempParentId && menuMap[tempParentId]) {
+      parentDisplay = menuMap[tempParentId].name;
+    }
+
+    // Type radio
+    var typeOptions = [
+      { v: 'directory', l: '目录', desc: '菜单分组容器' },
+      { v: 'menu', l: '菜单', desc: '具体页面' },
+      { v: 'button', l: '按钮', desc: '操作权限' }
+    ];
+    var typeHtml = typeOptions.map(function(t) {
+      var selected = tempType === t.v;
+      return '<div class="radio-item' + (selected ? ' selected' : '') + '" onclick="selectType(\'' + t.v + '\')">' +
+        '<span class="radio-dot"></span>' +
+        '<span class="radio-label">' + t.l + '</span>' +
+        '<span style="font-size:12px;color:var(--muted);margin-left:4px;">' + t.desc + '</span>' +
+      '</div>';
+    }).join('');
+
+    // Icon picker (only for directory and menu)
+    var iconHtml = '';
+    if (tempType !== 'button') {
+      iconHtml =
+        '<div class="form-item">' +
+          '<div class="form-item-label"><span class="form-item-label-text">菜单图标</span></div>' +
+          '<div class="icon-picker" id="icon-picker">' +
+            iconList.map(function(ic) {
+              var selected = tempIcon === ic;
+              return '<div class="icon-option' + (selected ? ' selected' : '') + '" onclick="selectIcon(\'' + ic + '\')" data-icon="' + ic + '">' + ic + '</div>';
+            }).join('') +
+          '</div>' +
+        '</div>';
+    }
+
+    // Route and component (only for directory and menu)
+    var routeHtml = '';
+    if (tempType !== 'button') {
+      routeHtml =
+        '<div class="form-row">' +
+          '<div class="form-item">' +
+            '<div class="form-item-label"><span class="form-item-label-text">路由地址</span></div>' +
+            '<input class="form-input" id="f-path" value="' + path + '" placeholder="如 /discovery 或 rule">' +
+          '</div>' +
+          '<div class="form-item">' +
+            '<div class="form-item-label"><span class="form-item-label-text">组件路径</span></div>' +
+            '<input class="form-input" id="f-component" value="' + component + '" placeholder="如 device-discovery">' +
+          '</div>' +
+        '</div>';
+    }
+
+    return (
+      '<div class="form-item">' +
+        '<div class="form-item-label"><span class="form-item-label-text">上级菜单</span></div>' +
+        '<div class="tree-select-wrap">' +
+          '<div class="tree-select-display" onclick="toggleParentSelect()">' + parentDisplay + '</div>' +
+          '<div class="tree-select-dropdown" id="parent-dropdown">' + renderParentTree(menus, 0) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="form-item">' +
+        '<div class="form-item-label"><span class="required-mark">*</span><span class="form-item-label-text">菜单类型</span></div>' +
+        '<div class="radio-group">' + typeHtml + '</div>' +
+      '</div>' +
+      '<div class="form-item">' +
+        '<div class="form-item-label"><span class="required-mark">*</span><span class="form-item-label-text">菜单名称</span></div>' +
+        '<input class="form-input" id="f-name" value="' + name + '" placeholder="请输入菜单名称" maxlength="20">' +
+      '</div>' +
+      iconHtml +
+      routeHtml +
+      '<div class="form-item">' +
+        '<div class="form-item-label"><span class="form-item-label-text">权限标识</span></div>' +
+        '<input class="form-input" id="f-perm" value="' + perm + '" placeholder="如 system:user">' +
+        '<div class="form-hint">控制器中用到的权限标识，如 system:user:add</div>' +
+      '</div>' +
+      '<div class="form-row">' +
+        '<div class="form-item">' +
+          '<div class="form-item-label"><span class="form-item-label-text">排序</span></div>' +
+          '<input class="form-input" id="f-sort" type="number" value="' + sort + '" placeholder="数字越小越靠前" min="0">' +
+        '</div>' +
+        '<div class="form-item">' +
+          '<div class="form-item-label"><span class="form-item-label-text">状态</span></div>' +
+          '<select class="form-select" id="f-status">' +
+            '<option value="normal"' + (status === 'normal' ? ' selected' : '') + '>显示</option>' +
+            '<option value="hidden"' + (status === 'hidden' ? ' selected' : '') + '>隐藏</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+      '<div class="form-item">' +
+        '<div class="form-item-label"><span class="form-item-label-text">备注</span></div>' +
+        '<textarea class="form-textarea" id="f-remark" placeholder="请输入备注" maxlength="100">' + remark + '</textarea>' +
+      '</div>'
+    );
+  }
+
+  function renderParentTree(nodes, level) {
+    var html = '';
+    var indent = '';
+    for (var i = 0; i < level; i++) indent += '── ';
+    nodes.forEach(function(n) {
+      if (n.type === 'button') return; // buttons can't be parent
+      var selected = tempParentId === n.id;
+      html += '<div class="tree-select-node' + (selected ? ' selected' : '') + '" onclick="selectParent(' + n.id + ')">' + indent + (level > 0 ? '├ ' : '') + n.name + '</div>';
+      if (n.children && n.children.length > 0) {
+        html += renderParentTree(n.children.filter(function(c) { return c.type !== 'button'; }), level + 1);
+      }
+    });
+    return html;
+  }
+
+  window.toggleParentSelect = function() {
+    var dd = document.getElementById('parent-dropdown');
+    dd.classList.toggle('show');
+  };
+
+  window.selectParent = function(id) {
+    tempParentId = id;
+    document.getElementById('parent-dropdown').classList.remove('show');
+    var name = id && menuMap[id] ? menuMap[id].name : '顶级菜单';
+    document.querySelector('.tree-select-display').textContent = name;
+    // Re-render dropdown to update selected state
+    document.getElementById('parent-dropdown').innerHTML = renderParentTree(menus, 0);
+  };
+
+  // Click outside to close parent dropdown
+  document.addEventListener('click', function(e) {
+    var dd = document.getElementById('parent-dropdown');
+    if (dd && dd.classList.contains('show') && !e.target.closest('.tree-select-wrap')) {
+      dd.classList.remove('show');
+    }
+  });
+
+  window.selectType = function(type) {
+    tempType = type;
+    // Re-render form body to show/hide fields
+    var m = drawerMode === 'edit' && editMenuId ? menuMap[editMenuId] : null;
+    document.getElementById('drawer-body').innerHTML = getFormHTML(m);
+  };
+
+  window.selectIcon = function(icon) {
+    tempIcon = icon;
+    document.querySelectorAll('.icon-option').forEach(function(el) {
+      el.classList.toggle('selected', el.dataset.icon === icon);
+    });
+  };
+
+  window.saveMenu = function() {
+    var name = document.getElementById('f-name').value.trim();
+    var sort = parseInt(document.getElementById('f-sort').value) || 0;
+    var status = document.getElementById('f-status').value;
+    var remark = document.getElementById('f-remark') ? document.getElementById('f-remark').value.trim() : '';
+    var path = '', component = '', perm = '';
+    if (document.getElementById('f-path')) path = document.getElementById('f-path').value.trim();
+    if (document.getElementById('f-component')) component = document.getElementById('f-component').value.trim();
+    if (document.getElementById('f-perm')) perm = document.getElementById('f-perm').value.trim();
+
+    if (!name) { showToast('请输入菜单名称', 'warning'); return; }
+
+    var now = new Date();
+    var nowStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0') + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ':' + String(now.getSeconds()).padStart(2, '0');
+
+    if (drawerMode === 'add') {
+      var newId = Math.max(0, getMaxId(menus)) + 1;
+      var newMenu = {
+        id: newId, name: name, type: tempType, icon: tempIcon,
+        path: path, perm: perm, sort: sort, status: status,
+        parentId: tempParentId, component: component, remark: remark,
+        children: []
+      };
+      if (tempParentId && menuMap[tempParentId]) {
+        if (!menuMap[tempParentId].children) menuMap[tempParentId].children = [];
+        menuMap[tempParentId].children.push(newMenu);
+        expandedNodes[tempParentId] = true;
+      } else {
+        menus.push(newMenu);
+      }
+      showToast('已新增菜单 ' + name, 'success');
+    } else if (drawerMode === 'edit' && editMenuId) {
+      var m = menuMap[editMenuId];
+      if (m) {
+        m.name = name; m.type = tempType; m.icon = tempIcon;
+        m.path = path; m.perm = perm; m.sort = sort; m.status = status;
+        m.component = component; m.remark = remark;
+        // If parent changed, move the node
+        if (m.parentId !== tempParentId) {
+          // Remove from old parent
+          deleteMenuFromTree(menus, editMenuId);
+          m.parentId = tempParentId;
+          if (tempParentId && menuMap[tempParentId]) {
+            if (!menuMap[tempParentId].children) menuMap[tempParentId].children = [];
+            menuMap[tempParentId].children.push(m);
+            expandedNodes[tempParentId] = true;
+          } else {
+            menus.push(m);
+          }
+        }
+      }
+      showToast('已更新菜单 ' + name, 'success');
+    }
+
+    closeDrawer();
+    buildMenuMap(menus);
+    renderTable();
+  };
+
+  function getMaxId(list) {
+    var max = 0;
+    list.forEach(function(m) {
+      if (m.id > max) max = m.id;
+      if (m.children && m.children.length > 0) {
+        var childMax = getMaxId(m.children);
+        if (childMax > max) max = childMax;
+      }
+    });
+    return max;
+  }
+
+  // ===== Init =====
+  // Expand top-level by default
+  menus.forEach(function(m) {
+    if (m.children && m.children.length > 0) expandedNodes[m.id] = true;
+  });
+  buildMenuMap(menus);
+  renderTable();
+</script>
+
+
+</body></html>
